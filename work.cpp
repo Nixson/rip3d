@@ -1,4 +1,5 @@
 #include "work.h"
+#include <QFile>
 
 Work::Work()
 {
@@ -9,8 +10,15 @@ void Work::Density(bool dens){
     if(data.count() > 0)
         convert();
 }
-void Work::doWork(const QByteArray &param){
-    data = QByteArray(param);
+void Work::doWork(const QString &fileName){
+    emit logLine1("Загрузка файла");
+    QFile file(fileName);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return;
+    }
+    emit logLine1("Запись в массив");
+    data = file.readAll();
+    file.close();
     convert();
 }
 void Work::convert(){

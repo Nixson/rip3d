@@ -76,19 +76,9 @@ void Rip3d::on_loadFile_triggered()
     QString fileName = QFileDialog::getOpenFileName(this, tr("Файл 3d объекта"), "",
             tr("Бинарные файлы (*.3d);;Все файлы (*.*)"));
     if (fileName != "") {
-            logLine1("Загрузка файла");
-            QFile file(fileName);
-            if (!file.open(QIODevice::ReadOnly)) {
-                QMessageBox::critical(this, tr("Error"), tr("Could not open file"));
-                return;
-            }
-            ui->progressBar->setVisible(true);
-            ui->progressBar->setValue(0);
-            logLine1("Запись в массив");
-            QByteArray data = file.readAll();
-            emit operate(data);
-//            plotGl->setData(data);
-            file.close();
+        ui->progressBar->setVisible(true);
+        ui->progressBar->setValue(0);
+        emit operate(fileName);
         }
 }
 

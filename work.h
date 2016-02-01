@@ -10,7 +10,7 @@ class Work : public QObject
 public:
     Work();
 public slots:
-    void doWork(const QByteArray &param);
+    void doWork(const QString &param);
     void Density(bool);
 signals:
     void resultReady(const Clowd &result);

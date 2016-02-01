@@ -23,7 +23,8 @@ signals:
     void xValueChanged(int);
     void yValueChanged(int);
     void zValueChanged(int);
-    void operate(const QByteArray &param);
+//    void operate(const QByteArray &param);
+    void operate(const QString &param);
     void Density(bool);
 
 private slots:
