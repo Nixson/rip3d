@@ -5,11 +5,9 @@ using namespace std;
 
 ScObject::ScObject(QObject *parent)
     :QObject(parent),
-    m_count(0)
+    m_count(0),
+    maxColor(0)
 {
-    maxColor = 200;
-    z_step = 0.24f;
-
     clearData();
     loadDataImage();
 
@@ -24,13 +22,13 @@ void ScObject::setMax(int color){
 void ScObject::loadDataImage(){
     int size = 0;
     int sMax = maxColor+10;
-    if(sMax > 255) sMax = 255;
-    for( int i = maxColor; i < 255; i++){
+    if(sMax > MAXBYTE) sMax = MAXBYTE;
+    for( int i = maxColor; i < MAXBYTE; i++){
         size += c_data[i].size();
     }
     m_data.resize( size );
     m_count = 0;
-    for( int i = maxColor; i < 255; i++){
+    for( int i = maxColor; i < MAXBYTE; i++){
         int size = c_data[i].size();
         if(size == 0) continue;
         GLfloat *s = c_data[i].data();
@@ -45,7 +43,7 @@ void ScObject::editData(const Clowd &result){
 
 }
 void ScObject::clearData(){
-    for(int i = 0; i < 256; i++){
+    for(int i = 0; i < MAXBYTE; i++){
         c_data[i].clear();
     }
 }

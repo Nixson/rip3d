@@ -21,8 +21,7 @@ public slots:
 
 private:
     QVector<GLfloat> m_data;
-    QMap<int, QVector<GLfloat> > c_data;
-    GLfloat z_step;
+    Clowd c_data;
     int m_count;
     int maxColor;
     int maxX;

@@ -5,6 +5,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLBuffer>
+#include <QOpenGLShaderProgram>
 #include <QMatrix4x4>
 #include "cloudtypelist.h"
 #include "scobject.h"
@@ -45,7 +46,6 @@ protected:
 private:
     void setupVertexAttribs();
 
-    bool m_core;
     int m_xRot;
     int m_yRot;
     int m_zRot;
@@ -55,7 +55,7 @@ private:
     QPoint m_lastPos;
     ScObject *m_Sc;
     QOpenGLVertexArrayObject m_vao;
-    QOpenGLBuffer m_logoVbo;
+    QOpenGLBuffer m_ScVbo;
     QOpenGLShaderProgram *m_program;
     int m_projMatrixLoc;
     int m_mvMatrixLoc;
@@ -69,7 +69,6 @@ private:
     QMatrix4x4 m_proj;
     QMatrix4x4 m_camera;
     QMatrix4x4 m_world;
-    bool m_transparent;
 };
 
 #endif // PLOTGL_H

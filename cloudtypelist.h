@@ -1,15 +1,15 @@
 #ifndef CLOUDTYPELIST_H
 #define CLOUDTYPELIST_H
 
-#include <QMap>
 #include <qopengl.h>
 #include <QVector>
-#include <QVector3D>
 
+#define MAXBYTE 256
+#define MAXBYTEFLOAT 256.0f
 
-typedef QVector<GLfloat> DVector;
-
-typedef QMap<int,DVector> Clowd;
-
+typedef struct Clowd {
+    QVector<GLfloat>& operator[](int i) { return byte[i]; }
+    QVector<GLfloat> byte[MAXBYTE];
+} Clowd;
 
 #endif // CLOUDTYPELIST_H
