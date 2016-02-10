@@ -1,10 +1,5 @@
 #include "work.h"
-<<<<<<< HEAD
 #include <iostream>
-#include <QTimer>
-=======
-#include <QFile>
->>>>>>> c112381cc7642d7288a90deed09d55f67060b07f
 
 Work::Work()
 {
@@ -15,7 +10,6 @@ void Work::Density(bool dens){
     if(data.count() > 0)
         convertCor();
 }
-<<<<<<< HEAD
 void Work::doWork(const QByteArray &param){
     dt = QDateTime::currentDateTime();
     emit logLine1(dt.toString()+" Загрузка данных");
@@ -313,18 +307,7 @@ void Work::convert1024(){
     emit logLine1("");
     emit logLine2("");
     emit resultReady(c_data);
-=======
-void Work::doWork(const QString &fileName){
-    emit logLine1("Загрузка файла");
-    QFile file(fileName);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return;
-    }
-    emit logLine1("Запись в массив");
-    data = file.readAll();
-    file.close();
-    convert();
->>>>>>> c112381cc7642d7288a90deed09d55f67060b07f
+
 }
 void Work::convert(){
     emit logLine1("Определение максимумов");
