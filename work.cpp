@@ -80,10 +80,11 @@ void Work::convertLast(){
             int max = (int)PositionMax[pc];
             //c_data[pc].reserve(PositionMax[pc]);
             c_data[pc].resize(max);
-            GLfloat *pD = c_data[pc].data();
-            pDColor[pc] = pD;
+//            GLfloat *pD =
+            pDColor[pc] = c_data[pc].data();
         }
     }
+    delete[] PositionMax;
 
     //обходим отсчеты
     int maxXpos = bSize/2;
@@ -116,8 +117,10 @@ void Work::convertLast(){
             lastprogress = progressB;
         }
     }
+    delete[] dataResultInt;
     dt = QDateTime::currentDateTime();
     emit logLine1(dt.toString()+" Готово");
+
     emit progress(100);
     emit logLine2(QString::number(maxColor));
 

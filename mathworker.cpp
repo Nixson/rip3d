@@ -10,12 +10,6 @@ MathWorker::~MathWorker(){
     delete[] OriginalPulseIm;
 }
 void MathWorker::initPulse(int leSubBufNum, double leFreq){
-    unsigned short BuffSize = 4;
-    unsigned char *Buffer = new unsigned char[BuffSize];
-    unsigned char *DataPtr = Buffer;
-
-    *((unsigned int *)(DataPtr)) = leSubBufNum*sizeof(int);
-    delete [] Buffer;
     unsigned int BufSize = leSubBufNum*1024;
     memset(OriginalPulseRe,0,BLOCKLANGTH*sizeof(double));
     memset(OriginalPulseIm,0,BLOCKLANGTH*sizeof(double));
@@ -93,6 +87,8 @@ void MathWorker::clear(){
     delete[] a0YYsv1;
     delete[] a1YYsv0;
     delete[] a1YYsv1;
+    mBuffer.clear();
+    ResUlst.clear();
 }
 void MathWorker::run(){
     ResUlst.resize((NumLast-NumStart)*BLOCKLANGTH);
@@ -105,101 +101,94 @@ void MathWorker::run(){
 void MathWorker::MyCorrelation(double* in, int dataSize, double* kernel, int kernelSize, double* out)
 {
         int i, j, k;
-        int num = 0;
 
         // Проверка параметров
         if(!in || !out || !kernel) return;
         if(dataSize <=0 || kernelSize <= 0) return;
 
-        // start convolution from out[kernelSize-1] to out[dataSize-1] (last)
-        for(i = kernelSize-1; i < dataSize; ++i)
-        {
-                out[i] = 0;                             // init to 0 before accumulate
-
-                for(j = i, k = 0; k < kernelSize; --j, ++k){
-                    out[i] += in[j] * kernel[k];
-                    num++;
-                }
-        }
-
         // convolution from out[0] to out[kernelSize-2]
-        for(i = 0; i < kernelSize - 1; ++i)
+        for(i = 0; i < BLOCKLANGTH; ++i)
         {
                 out[i] = 0;                             // init to 0 before sum
-
                 for(j = i, k = 0; j >= 0; --j, ++k){
                         out[i] += in[j] * kernel[k];
-                        num++;
                 }
         }
-
-
         return;
 }
 void MathWorker::Math()
 {
-     double *a0XX, *a1XX, *a0YY, *a1YY;
+    int j, k;
 
-     unsigned int Size = BLOCKLANGTH;
-     int position = 0;
-     for(int iNum = NumStart; iNum < NumLast; iNum++){
-
-         double *DataBuf = mBuffer.data()+iNum*BLOCKRANGE;
+    int position = 0;
+    for(int iNum = NumStart; iNum < NumLast; iNum++){
+        DataBuf = mBuffer.data()+iNum*BLOCKRANGE;
 
 
-         a0XX = DataBuf+Size*0;
-         a0YY = DataBuf+Size*1;
-         a1XX = DataBuf+Size*2;
-         a1YY = DataBuf+Size*3;
+        a0XX = DataBuf+BLOCKLANGTH*0;
+        a0YY = DataBuf+BLOCKLANGTH*1;
+        a1XX = DataBuf+BLOCKLANGTH*2;
+        a1YY = DataBuf+BLOCKLANGTH*3;
+        memset(a0XXsv0,0,BLOCKLANGTH*sizeof(double));
+        memset(a0XXsv1,0,BLOCKLANGTH*sizeof(double));
+        memset(a1XXsv0,0,BLOCKLANGTH*sizeof(double));
+        memset(a1XXsv1,0,BLOCKLANGTH*sizeof(double));
+        memset(a0YYsv0,0,BLOCKLANGTH*sizeof(double));
+        memset(a0YYsv1,0,BLOCKLANGTH*sizeof(double));
+        memset(a1YYsv0,0,BLOCKLANGTH*sizeof(double));
+        memset(a1YYsv1,0,BLOCKLANGTH*sizeof(double));
 
+        for(unsigned int i = 0; i < BLOCKLANGTH; ++i)
+        {
+            for(j = i, k = 0; j >= 0; --j, ++k){
+                double re = OriginalPulseRe[k];
+                double im = OriginalPulseRe[k];
+                a0XXsv0[i] += a0XX[j] * re;
+                a0XXsv1[i] += a0XX[j] * im;
+                a1XXsv0[i] += a1XX[j] * re;
+                a1XXsv1[i] += a1XX[j] * im;
+                a0YYsv0[i] += a0YY[j] * re;
+                a0YYsv1[i] += a0YY[j] * im;
+                a1YYsv0[i] += a1YY[j] * re;
+                a1YYsv1[i] += a1YY[j] * im;
+            }
+            // произведение сигналов с двух антенн в режиме ХХ с комплексным сопряжением
+                        // Изменил знаки, как в YY, стало лучше, но сдвиг углов между гор. и верт. поляризац. около 3 град.
+            ResXXRe[i] = (a0XXsv0[i]*a1XXsv0[i] + a0XXsv1[i]*a1XXsv1[i])/1152/8;//*cos(M_PI/2);
 
-         MyCorrelation(a0XX, Size, OriginalPulseRe, Size, a0XXsv0);
-         MyCorrelation(a0XX, Size, OriginalPulseIm, Size, a0XXsv1);
-         MyCorrelation(a1XX, Size, OriginalPulseRe, Size, a1XXsv0);
-         MyCorrelation(a1XX, Size, OriginalPulseIm, Size, a1XXsv1);
-         MyCorrelation(a0YY, Size, OriginalPulseRe, Size, a0YYsv0);
-         MyCorrelation(a0YY, Size, OriginalPulseIm, Size, a0YYsv1);
-         MyCorrelation(a1YY, Size, OriginalPulseRe, Size, a1YYsv0);
-         MyCorrelation(a1YY, Size, OriginalPulseIm, Size, a1YYsv1);
+                        // 	ResXXRe[i] = -(a0XXsv0[i]*a1XXsv0[i] + a0XXsv1[i]*a1XXsv1[i])/1152/8;//*cos(M_PI/2);
+            // изменён порядок вычисления нумерации антенн 2015.01.31
+            ResXXIm[i] = (a0XXsv0[i]*a1XXsv1[i] - a0XXsv1[i]*a1XXsv0[i])/1152/8;//*sin(M_PI/2);
+                       // - заменил на +
+                       // ResXXIm[i] = (-a0XXsv0[i]*a1XXsv1[i] - a0XXsv1[i]*a1XXsv0[i])/1152/8;//*sin(M_PI/2);
+            // вычисление фазы сигнала с антенны 0 в режиме ХХ
+            if((a0XXsv1[i] != 0) && (a0XXsv0[i] != 0))
 
-         for(unsigned int i=0; i<Size; i++)
-         {
-                // произведение сигналов с двух антенн в режиме ХХ с комплексным сопряжением
-                            // Изменил знаки, как в YY, стало лучше, но сдвиг углов между гор. и верт. поляризац. около 3 град.
-                ResXXRe[i] = (a0XXsv0[i]*a1XXsv0[i] + a0XXsv1[i]*a1XXsv1[i])/1152/8;//*cos(M_PI/2);
+                 ResXXPhase[i] = 180*(atan2(a0XXsv1[i], a0XXsv0[i])+M_PI)/M_PI;
+                                 //Убрал из   ResXXPhase[i]    +M_PI для устранения фазового сдвига между каналами - не помогло
+                                // ResXXPhase[i] = 180*(atan2(a0XXsv1[i], a0XXsv0[i]))/M_PI;
 
-                            // 	ResXXRe[i] = -(a0XXsv0[i]*a1XXsv0[i] + a0XXsv1[i]*a1XXsv1[i])/1152/8;//*cos(M_PI/2);
-                // изменён порядок вычисления нумерации антенн 2015.01.31
-                ResXXIm[i] = (a0XXsv0[i]*a1XXsv1[i] - a0XXsv1[i]*a1XXsv0[i])/1152/8;//*sin(M_PI/2);
-                           // - заменил на +
-                           // ResXXIm[i] = (-a0XXsv0[i]*a1XXsv1[i] - a0XXsv1[i]*a1XXsv0[i])/1152/8;//*sin(M_PI/2);
-                // вычисление фазы сигнала с антенны 0 в режиме ХХ
-                if((a0XXsv1[i] != 0) && (a0XXsv0[i] != 0))
+            if((a0YYsv1[i] != 0) && (a0YYsv0[i] != 0))
+                 ResYYPhase[i] = 180*(atan2(a0YYsv1[i], a0YYsv0[i])+M_PI)/M_PI;
 
-                     ResXXPhase[i] = 180*(atan2(a0XXsv1[i], a0XXsv0[i])+M_PI)/M_PI;
-                                     //Убрал из   ResXXPhase[i]    +M_PI для устранения фазового сдвига между каналами - не помогло
-                                    // ResXXPhase[i] = 180*(atan2(a0XXsv1[i], a0XXsv0[i]))/M_PI;
+            // вычисление модуля и аргумента произведения сигналов в режиме ХХ
+            ResXXAbs[i] = pow(ResXXRe[i]*ResXXRe[i] + ResXXIm[i]*ResXXIm[i], 0.5);
+            if(ResXXAbs[i] >=1e-13) ResXXAng[i] = RAD*(atan2(ResXXIm[i], ResXXRe[i]));
+            else ResXXAng[i] = 0; // аргумент от -180 до 180 градусов
 
-                if((a0YYsv1[i] != 0) && (a0YYsv0[i] != 0))
-                     ResYYPhase[i] = 180*(atan2(a0YYsv1[i], a0YYsv0[i])+M_PI)/M_PI;
+            // произведение сигналов с двух антенн в режиме YY с комплексным сопряжением
+            // изменён порядок вычисления нумерации антенн 2015.01.31
+            // !!!!! УБРАНА ИНВЕРСИЯ ПРОИЗВЕДЕНИЯ СИГНАЛОВ АНТЕНН ДЛЯ УСТРАНЕНИЯ СИСТЕМАТИЧЕСКОЙ
+            // ПОГРЕШНОСТИ РАЗНОСТИ ФАЗ В 180 ГРАДУСОВ
+            ResYYRe[i] = (a0YYsv0[i]*a1YYsv0[i] + a0YYsv1[i]*a1YYsv1[i])/1152/8;
+            ResYYIm[i] = (a0YYsv0[i]*a1YYsv1[i] - a0YYsv1[i]*a1YYsv0[i])/1152/8;
 
-                // вычисление модуля и аргумента произведения сигналов в режиме ХХ
-                ResXXAbs[i] = pow(ResXXRe[i]*ResXXRe[i] + ResXXIm[i]*ResXXIm[i], 0.5);
-                if(ResXXAbs[i] >=1e-13) ResXXAng[i] = RAD*(atan2(ResXXIm[i], ResXXRe[i]));
-                else ResXXAng[i] = 0; // аргумент от -180 до 180 градусов
+            // вычисление модуля и аргумента произведения сигналов в режиме YY
+            ResYYAbs[i] = pow(ResYYRe[i]*ResYYRe[i] + ResYYIm[i]*ResYYIm[i], 0.5);
+            if(ResYYAbs[i] >= 1e-13) ResYYAng[i] = RAD*(atan2(ResYYIm[i], ResYYRe[i]));
+            else ResYYAng[i] = 0;
+        }
 
-                // произведение сигналов с двух антенн в режиме YY с комплексным сопряжением
-                // изменён порядок вычисления нумерации антенн 2015.01.31
-                // !!!!! УБРАНА ИНВЕРСИЯ ПРОИЗВЕДЕНИЯ СИГНАЛОВ АНТЕНН ДЛЯ УСТРАНЕНИЯ СИСТЕМАТИЧЕСКОЙ
-                // ПОГРЕШНОСТИ РАЗНОСТИ ФАЗ В 180 ГРАДУСОВ
-                ResYYRe[i] = (a0YYsv0[i]*a1YYsv0[i] + a0YYsv1[i]*a1YYsv1[i])/1152/8;
-                ResYYIm[i] = (a0YYsv0[i]*a1YYsv1[i] - a0YYsv1[i]*a1YYsv0[i])/1152/8;
-
-                // вычисление модуля и аргумента произведения сигналов в режиме YY
-                ResYYAbs[i] = pow(ResYYRe[i]*ResYYRe[i] + ResYYIm[i]*ResYYIm[i], 0.5);
-                if(ResYYAbs[i] >= 1e-13) ResYYAng[i] = RAD*(atan2(ResYYIm[i], ResYYRe[i]));
-                else ResYYAng[i] = 0;
-         }
          memcpy(ResUlst.data()+position,ResXXAbs,BLOCKLANGTH*sizeof(double));
          position+=BLOCKLANGTH;
      }

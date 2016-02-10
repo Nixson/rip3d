@@ -46,6 +46,8 @@ private:
     double *ResYYReAvg, *ResYYImAvg;
     MathVector mBuffer;
     MathVector ResUlst;
+    double *a0XX, *a1XX, *a0YY, *a1YY;
+    double *DataBuf;
 };
 
 #endif // MATHWORKER_H
