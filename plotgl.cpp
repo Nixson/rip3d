@@ -1,6 +1,7 @@
 #include "plotgl.h"
 #include <QMouseEvent>
 #include <QCoreApplication>
+#include <QPainter>
 #include <math.h>
 
 PlotGl::PlotGl(ScObject *sc, QWidget *parent)
@@ -105,7 +106,7 @@ static const char *fragmentShaderSource =
     "   highp vec3 L = normalize(lightPos - vert);\n"
     "   highp float NL = max(dot(normalize(vertNormal), L), 0.0);\n"
     "   highp vec3 color = vColor;\n"
-    "   highp vec3 col = clamp(color * 0.2 + color * 0.8 * NL, 0.0, 1.0);\n"
+    "   highp vec3 col = clamp(color * 0.85 + color * 0.95 * NL, 0.0, 1.0);\n"
     "   gl_FragColor = vec4(col, 0.2);\n"
     "}\n";
 
@@ -139,6 +140,7 @@ void PlotGl::initializeGL()
     m_ScVbo.create();
     m_ScVbo.bind();
     m_ScVbo.allocate(m_Sc->constData(), m_Sc->count() * sizeof(GLfloat));
+    vaoBinder.rebind();
 
     setupVertexAttribs();
 
@@ -169,6 +171,10 @@ void PlotGl::updateSc(){
 }
 void PlotGl::paintGL()
 {
+    /*QPainter painter;
+    painter.begin(this);
+
+    painter.beginNativePainting();*/
     glEnable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
@@ -190,13 +196,20 @@ void PlotGl::paintGL()
     QMatrix3x3 normalMatrix = m_world.normalMatrix();
     m_program->setUniformValue(m_normalMatrixLoc, normalMatrix);
 
-    //glDrawArrays(GL_TRIANGLES, 0, m_logo.vertexCount());
-    //glDrawArrays(GL_LINES, 0, m_logo.vertexCount());
     glDrawArrays(GL_POINTS, 0, m_Sc->vertexCount());
-
+    //vaoBinder.release();
 
 
     m_program->release();
+
+    /*painter.endNativePainting();
+
+
+        painter.setPen(Qt::white);
+        painter.drawText(0, 1, " paintGL calls / s");
+
+    painter.end();*/
+
 }
 void PlotGl::initData(){
 
@@ -205,6 +218,7 @@ void PlotGl::initData(){
 void PlotGl::resizeGL(int w, int h)
 {
     m_proj.setToIdentity();
+//    m_proj.perspective(100.0f, GLfloat(w) / h, 0.01f, 100.0f);
     m_proj.perspective(45.0f, GLfloat(w) / h, 0.01f, 100.0f);
 }
 

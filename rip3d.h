@@ -3,9 +3,11 @@
 
 #include <QMainWindow>
 #include <QThread>
+#include <QTimer>
 #include "cloudtypelist.h"
 #include "scobject.h"
 #include "plotgl.h"
+#include "rcontrol.h"
 
 namespace Ui {
 class Rip3d;
@@ -23,6 +25,7 @@ signals:
     void xValueChanged(int);
     void yValueChanged(int);
     void zValueChanged(int);
+    void verticalSliderChanged(int);
     void operate(const QByteArray &param);
     void Density(bool);
 
@@ -39,14 +42,24 @@ private slots:
     void zRotationChanged(int);
 
     void progress(int);
+    void progressTimer();
+    void progressTimerNum();
     void logLine1(QString);
     void logLine2(QString);
     void handleResults(const Clowd &result);
+
+    void on_verticalSlider_valueChanged(int value);
+
+    void on_mmSettings_triggered();
 
 private:
     Ui::Rip3d *ui;
     PlotGl *plotGl;
     ScObject *sc;
+    bool first;
+    Rcontrol control;
+    QTimer *timer;
+    bool timerOn;
 };
 
 #endif // RIP3D_H

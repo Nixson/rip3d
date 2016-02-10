@@ -20,6 +20,14 @@ void ScObject::setMax(int color){
 }
 
 void ScObject::loadDataImage(){
+    /*int size = c_data[maxColor].size();
+    GLfloat *s = c_data[maxColor].data();
+    GLfloat *p = m_data.data();
+    memcpy(p,s, size * sizeof(GLfloat) );
+    m_count = size;
+    return;
+    */
+
     int size = 0;
     int sMax = maxColor+10;
     if(sMax > MAXBYTE) sMax = MAXBYTE;
