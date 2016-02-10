@@ -14,7 +14,7 @@ class Work : public QObject
 public:
     Work();
 public slots:
-    void doWork(const QByteArray &param);
+    void doWork(const QString &param);
     void Density(bool);
     void sChangeInt(QString, int);
     void sChangeDouble(QString, double);
