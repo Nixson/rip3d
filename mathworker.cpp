@@ -91,13 +91,46 @@ void MathWorker::clear(){
     ResUlst.clear();
 }
 void MathWorker::run(){
-    ResUlst.resize((NumLast-NumStart)*BLOCKLANGTH);
-    Math();
+    ResUlst.resize((NumLast-NumStart)*BLOCKLANGTH*2);
+    MathVector ResUlstY;
+    ResUlstY.resize((NumLast-NumStart)*BLOCKLANGTH*2);
+    int step = 0;
+    for(int iNum = NumStart; iNum < NumLast; iNum++){
+        double *DataBuf;
+        DataBuf = mBuffer.data()+iNum*BLOCKRANGE;
+        Math1(BLOCKRANGE,DataBuf);
+        double index = 0;
+        for(int i=0; i<BLOCKLANGTH; i++)
+        {
+               ResUlst[step] = ResXXAbs[i];
+               ResUlstY[step] = ResYYAbs[i];
+               step++;
+               // !!! значения аргумента в диапазоне от -180 до 180
+               index = round(ResXXAng[i]+180); // округдение аргумента для определения индекса ячейки
+               // приведение фазы к диапазону от 0 до 360
+               while(index >= 360) index -= 360;
+               while(index < 0) index += 360;
+               // накопление значений
+               ResUlst[step] = index;
+               // !!! значения аргумента в диапазоне от -180 до 180
+               index = round(ResYYAng[i]+180); // округдение аргумента для определения индекса ячейки
+               // приведение фазы к диапазону от 0 до 360
+               while(index >= 360) index -= 360;
+               while(index < 0) index += 360;
+               // накопление значений
+               ResUlstY[step] = index;
+               step++;
+        }
+
+    }
+
     emit result(ResUlst);
+    emit resultXX(ResUlst);
+    emit resultYY(ResUlst);
     clear();
 }
 
-
+/*
 void MathWorker::MyCorrelation(double* in, int dataSize, double* kernel, int kernelSize, double* out)
 {
         int i, j, k;
@@ -116,11 +149,20 @@ void MathWorker::MyCorrelation(double* in, int dataSize, double* kernel, int ker
         }
         return;
 }
+*/
 void MathWorker::Math()
 {
     int j, k;
+    double ResYYPhase, ResXXPhase;
+    double ResXXAbs, ResYYAbs;
+    double ResXXAng, ResYYAng;
+    double ResXXRe, ResXXIm;
+    double ResYYRe, ResYYIm;
+    double a0XXsv0, a0XXsv1, a1XXsv0, a1XXsv1;
+    double a0YYsv0, a0YYsv1, a1YYsv0, a1YYsv1;
 
     int position = 0;
+    double *XXRsp = new double[BLOCKLANGTH*2];
     for(int iNum = NumStart; iNum < NumLast; iNum++){
         DataBuf = mBuffer.data()+iNum*BLOCKRANGE;
 
@@ -129,29 +171,144 @@ void MathWorker::Math()
         a0YY = DataBuf+BLOCKLANGTH*1;
         a1XX = DataBuf+BLOCKLANGTH*2;
         a1YY = DataBuf+BLOCKLANGTH*3;
-        memset(a0XXsv0,0,BLOCKLANGTH*sizeof(double));
-        memset(a0XXsv1,0,BLOCKLANGTH*sizeof(double));
-        memset(a1XXsv0,0,BLOCKLANGTH*sizeof(double));
-        memset(a1XXsv1,0,BLOCKLANGTH*sizeof(double));
-        memset(a0YYsv0,0,BLOCKLANGTH*sizeof(double));
-        memset(a0YYsv1,0,BLOCKLANGTH*sizeof(double));
-        memset(a1YYsv0,0,BLOCKLANGTH*sizeof(double));
-        memset(a1YYsv1,0,BLOCKLANGTH*sizeof(double));
+
+        unsigned int sTp = 0;
 
         for(unsigned int i = 0; i < BLOCKLANGTH; ++i)
         {
+            a0XXsv0 = 0;
+            a0XXsv1 = 0;
+            a1XXsv0 = 0;
+            a1XXsv1 = 0;
+            a0YYsv0 = 0;
+            a0YYsv1 = 0;
+            a1YYsv0 = 0;
+            a1YYsv1 = 0;
             for(j = i, k = 0; j >= 0; --j, ++k){
                 double re = OriginalPulseRe[k];
                 double im = OriginalPulseRe[k];
-                a0XXsv0[i] += a0XX[j] * re;
-                a0XXsv1[i] += a0XX[j] * im;
-                a1XXsv0[i] += a1XX[j] * re;
-                a1XXsv1[i] += a1XX[j] * im;
-                a0YYsv0[i] += a0YY[j] * re;
-                a0YYsv1[i] += a0YY[j] * im;
-                a1YYsv0[i] += a1YY[j] * re;
-                a1YYsv1[i] += a1YY[j] * im;
+                a0XXsv0 += a0XX[j] * re;
+                a0XXsv1 += a0XX[j] * im;
+                a1XXsv0 += a1XX[j] * re;
+                a1XXsv1 += a1XX[j] * im;
+                a0YYsv0 += a0YY[j] * re;
+                a0YYsv1 += a0YY[j] * im;
+                a1YYsv0 += a1YY[j] * re;
+                a1YYsv1 += a1YY[j] * im;
             }
+            // произведение сигналов с двух антенн в режиме ХХ с комплексным сопряжением
+                        // Изменил знаки, как в YY, стало лучше, но сдвиг углов между гор. и верт. поляризац. около 3 град.
+            ResXXRe = (a0XXsv0*a1XXsv0 + a0XXsv1*a1XXsv1)/1152/8;//*cos(M_PI/2);
+
+                        // 	ResXXRe = -(a0XXsv0*a1XXsv0 + a0XXsv1*a1XXsv1)/1152/8;//*cos(M_PI/2);
+            // изменён порядок вычисления нумерации антенн 2015.01.31
+            ResXXIm = (a0XXsv0*a1XXsv1 - a0XXsv1*a1XXsv0)/1152/8;//*sin(M_PI/2);
+                       // - заменил на +
+                       // ResXXIm = (-a0XXsv0*a1XXsv1 - a0XXsv1*a1XXsv0)/1152/8;//*sin(M_PI/2);
+            // вычисление фазы сигнала с антенны 0 в режиме ХХ
+            if((a0XXsv1 != 0) && (a0XXsv0 != 0))
+
+                 ResXXPhase = 180*(atan2(a0XXsv1, a0XXsv0)+M_PI)/M_PI;
+                                 //Убрал из   ResXXPhase    +M_PI для устранения фазового сдвига между каналами - не помогло
+                                // ResXXPhase = 180*(atan2(a0XXsv1, a0XXsv0))/M_PI;
+
+            if((a0YYsv1 != 0) && (a0YYsv0 != 0))
+                 ResYYPhase = 180*(atan2(a0YYsv1, a0YYsv0)+M_PI)/M_PI;
+
+            // вычисление модуля и аргумента произведения сигналов в режиме ХХ
+            ResXXAbs = pow(ResXXRe*ResXXRe + ResXXIm*ResXXIm, 0.5);
+            if(ResXXAbs >=1e-13) ResXXAng = RAD*(atan2(ResXXIm, ResXXRe));
+            else ResXXAng = 0; // аргумент от -180 до 180 градусов
+
+            // произведение сигналов с двух антенн в режиме YY с комплексным сопряжением
+            // изменён порядок вычисления нумерации антенн 2015.01.31
+            // !!!!! УБРАНА ИНВЕРСИЯ ПРОИЗВЕДЕНИЯ СИГНАЛОВ АНТЕНН ДЛЯ УСТРАНЕНИЯ СИСТЕМАТИЧЕСКОЙ
+            // ПОГРЕШНОСТИ РАЗНОСТИ ФАЗ В 180 ГРАДУСОВ
+            ResYYRe = (a0YYsv0*a1YYsv0 + a0YYsv1*a1YYsv1)/1152/8;
+            ResYYIm = (a0YYsv0*a1YYsv1 - a0YYsv1*a1YYsv0)/1152/8;
+
+            // вычисление модуля и аргумента произведения сигналов в режиме YY
+            ResYYAbs = pow(ResYYRe*ResYYRe + ResYYIm*ResYYIm, 0.5);
+            if(ResYYAbs >= 1e-13) ResYYAng = RAD*(atan2(ResYYIm, ResYYRe));
+            else ResYYAng = 0;
+            double index = round(ResXXAng+180);
+            if(index >= 360)
+                index -=360;
+            if(index < 0)
+                index +=360;
+            XXRsp[sTp] = ResXXAbs;
+            sTp++;
+            XXRsp[sTp] = ResXXAbs;
+            sTp++;
+        }
+
+         memcpy(ResUlst.data()+position,XXRsp,BLOCKLANGTH*sizeof(double)*2);
+         //memcpy(ResUlst.data()+position,ResXXPhase,BLOCKLANGTH*sizeof(double));
+         /*memcpy(
+          * .data()+position*3,ResYYAbs,BLOCKLANGTH*sizeof(double));
+         memcpy(ResUlst.data()+position*4,ResYYPhase,BLOCKLANGTH*sizeof(double));*/
+         position+=BLOCKLANGTH*2;
+     }
+    delete[] XXRsp;
+}
+
+
+void MathWorker::MyCorrelation(double* in, int dataSize, double* kernel, int kernelSize, double* out)
+{
+        int i, j, k;
+
+        // check validity of params
+        if(!in || !out || !kernel) return;
+        if(dataSize <=0 || kernelSize <= 0) return;
+
+        // start convolution from out[kernelSize-1] to out[dataSize-1] (last)
+        for(i = kernelSize-1; i < dataSize; ++i)
+        {
+                out[i] = 0;                             // init to 0 before accumulate
+
+                for(j = i, k = 0; k < kernelSize; --j, ++k)
+                        out[i] += in[j] * kernel[k];
+        }
+
+        // convolution from out[0] to out[kernelSize-2]
+        for(i = 0; i < kernelSize - 1; ++i)
+        {
+                out[i] = 0;                             // init to 0 before sum
+
+                for(j = i, k = 0; j >= 0; --j, ++k)
+                        out[i] += in[j] * kernel[k];
+        }
+
+        return;
+}
+void MathWorker::Math1(unsigned int BufSize, double *DataBuf)
+{
+     double *a0XX, *a1XX, *a0YY, *a1YY;
+/*
+     unsigned int Size = BufSize/sizeof(int);
+     a0XX = DataBuf+1024*0;
+     a1XX = DataBuf+1024*1;
+     a0YY = DataBuf+1024*2;
+     a1YY = DataBuf+1024*3;
+*/
+     unsigned int Size = BufSize/4;
+
+     a0XX = DataBuf+Size*0;
+     a1XX = DataBuf+Size*1;
+     a0YY = DataBuf+Size*2;
+     a1YY = DataBuf+Size*3;
+
+     MyCorrelation(a0XX, Size, OriginalPulseRe, Size, a0XXsv0);
+     MyCorrelation(a0XX, Size, OriginalPulseIm, Size, a0XXsv1);
+     MyCorrelation(a1XX, Size, OriginalPulseRe, Size, a1XXsv0);
+     MyCorrelation(a1XX, Size, OriginalPulseIm, Size, a1XXsv1);
+     MyCorrelation(a0YY, Size, OriginalPulseRe, Size, a0YYsv0);
+     MyCorrelation(a0YY, Size, OriginalPulseIm, Size, a0YYsv1);
+     MyCorrelation(a1YY, Size, OriginalPulseRe, Size, a1YYsv0);
+     MyCorrelation(a1YY, Size, OriginalPulseIm, Size, a1YYsv1);
+
+     for(unsigned int i=0; i<Size; i++)
+     {
             // произведение сигналов с двух антенн в режиме ХХ с комплексным сопряжением
                         // Изменил знаки, как в YY, стало лучше, но сдвиг углов между гор. и верт. поляризац. около 3 град.
             ResXXRe[i] = (a0XXsv0[i]*a1XXsv0[i] + a0XXsv1[i]*a1XXsv1[i])/1152/8;//*cos(M_PI/2);
@@ -187,9 +344,7 @@ void MathWorker::Math()
             ResYYAbs[i] = pow(ResYYRe[i]*ResYYRe[i] + ResYYIm[i]*ResYYIm[i], 0.5);
             if(ResYYAbs[i] >= 1e-13) ResYYAng[i] = RAD*(atan2(ResYYIm[i], ResYYRe[i]));
             else ResYYAng[i] = 0;
-        }
 
-         memcpy(ResUlst.data()+position,ResXXAbs,BLOCKLANGTH*sizeof(double));
-         position+=BLOCKLANGTH;
      }
+//   formExpDraw->DrawOscCoherentAccum(ResXXAbs, Size);
 }

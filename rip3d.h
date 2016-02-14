@@ -28,6 +28,9 @@ signals:
     void verticalSliderChanged(int);
     void operate(const QByteArray &param);
     void Density(bool);
+    void ArgMinChanged(int);
+    void ArgMaxChanged(int);
+    void PhMinChanged(int);
 
 private slots:
     void on_loadFile_triggered();
@@ -40,6 +43,7 @@ private slots:
     void xRotationChanged(int);
     void yRotationChanged(int);
     void zRotationChanged(int);
+    void MaxColorValue(int);
 
     void progress(int);
     void progressTimer();
@@ -47,10 +51,21 @@ private slots:
     void logLine1(QString);
     void logLine2(QString);
     void handleResults(const Clowd &result);
-
     void on_verticalSlider_valueChanged(int value);
-
     void on_mmSettings_triggered();
+    void on_ArgMin_valueChanged(int value);
+    void on_ArgMax_valueChanged(int value);
+    void on_PhMin_valueChanged(int value);
+    void setArgMin(int val);
+    void setArgMax(int val);
+    void setPhMin(int val);
+
+
+    void on_mmplotXX_triggered();
+
+    void on_mmplotYY_triggered();
+
+    void on_mmShowDock_triggered();
 
 private:
     Ui::Rip3d *ui;

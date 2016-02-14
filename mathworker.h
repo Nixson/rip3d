@@ -14,6 +14,8 @@ public:
 
 signals:
     void result(const MathVector &buf);
+    void resultXX(const MathVector &buf);
+    void resultYY(const MathVector &buf);
 public slots:
     void run();
     void Buffer(const MathVector &buf, int numStart, int numLast);
@@ -26,6 +28,7 @@ private:
     double *OriginalPulseIm;
     void MyCorrelation(double* in, int dataSize, double* kernel, int kernelSize, double* out);
     void Math();
+    void Math1(unsigned int BufSize, double *DataBuf);
     double *wBuffer;
     int     BuferSize;
     double *a0XXsv0;

@@ -10,6 +10,16 @@ Rcontrol::Rcontrol(QObject *parent) : QObject(parent)
     connect(this,&Rcontrol::changeBool,this,&Rcontrol::sChangeBool);
     connect(this,&Rcontrol::changeDouble,this,&Rcontrol::sChangeDouble);
     connect(this,&Rcontrol::changeString,this,&Rcontrol::sChangeString);
+
+    plotterXX = new Plotter;
+    plotterYY = new Plotter;
+    connect(this, &Rcontrol::setMax, plotterXX, &Plotter::setMax);
+    connect(this, &Rcontrol::setAngle, plotterXX, &Plotter::setAngle);
+    connect(this, &Rcontrol::setOffset, plotterXX, &Plotter::setOffset);
+    connect(this, &Rcontrol::setMax, plotterYY, &Plotter::setMax);
+    connect(this, &Rcontrol::setAngle, plotterYY, &Plotter::setAngle);
+    connect(this, &Rcontrol::setOffset, plotterYY, &Plotter::setOffset);
+
     formsettings = new formSettings;
 
     connect(formsettings,&formSettings::leSubBufNum,this,&Rcontrol::leSubBufNum);
@@ -65,6 +75,17 @@ Rcontrol::Rcontrol(QObject *parent) : QObject(parent)
     connect(worker, &Work::progress, this, &Rcontrol::sprogress);
     connect(worker, &Work::progressTimer, this, &Rcontrol::sprogressTimer);
     connect(this,&Rcontrol::Density,worker,&Work::Density);
+    connect(this, &Rcontrol::setMax, worker, &Work::setMax);
+    connect(this, &Rcontrol::setAngle, worker, &Work::setAngle);
+    connect(this, &Rcontrol::setOffset, worker, &Work::setOffset);
+    connect(worker, &Work::MaxColorValue, this, &Rcontrol::sMaxColorValue);
+    connect(worker, &Work::MaxColorValue, plotterXX, &Plotter::MaxColorValue);
+    connect(worker, &Work::MaxColorValue, plotterYY, &Plotter::MaxColorValue);
+    //connect(worker, &Work::ShowXX, this, &Rcontrol::ShowXX);
+    //connect(worker, &Work::ShowYY, this, &Rcontrol::ShowYY);
+    connect(worker, &Work::ShowXX, plotterXX, &Plotter::ShowDataVector);
+    connect(worker, &Work::ShowYY, plotterYY, &Plotter::ShowDataVector);
+
 
     connect(this,&Rcontrol::changeBool,worker,&Work::sChangeBool);
     connect(this,&Rcontrol::changeDouble,worker,&Work::sChangeDouble);
@@ -91,7 +112,11 @@ Rcontrol::Rcontrol(QObject *parent) : QObject(parent)
     connect(mWorker2, &MathWorker::result, worker, &Work::result2);
     corThread2.start();
 
+}
+void Rcontrol::ShowXX(IntVector &amp, IntVector &ph){
 
+}
+void Rcontrol::ShowYY(IntVector &amp, IntVector &ph){
 
 }
 Rcontrol::~Rcontrol()
@@ -104,7 +129,10 @@ Rcontrol::~Rcontrol()
     corThread2.wait();
 }
 
-
+void Rcontrol::sMaxColorValue(int val){
+    settings->setValue("MaxColorValue",val);
+    emit MaxColorValue(val);
+}
 void Rcontrol::init(){
 
     int xRotation = settings->value("xRotation",0).toInt();
@@ -116,9 +144,6 @@ void Rcontrol::init(){
     int zRotation = settings->value("zRotation",0).toInt();
     emit setzValue(zRotation);
     setInt("zRotation",zRotation);
-    int colorValue = settings->value("colorValue",0).toInt();
-    emit setVerticalSlider(colorValue);
-    setInt("colorValue",colorValue);
 
 
     int leSubBufNum = settings->value("leSubBufNum",4).toInt();
@@ -127,6 +152,29 @@ void Rcontrol::init(){
     int leFreq = settings->value("leFreq",1777).toInt();
     emit setleFreq(leFreq);
     setDouble("leFreq",leFreq);
+
+    emit MaxColorValue(settings->value("MaxColorValue",64000).toInt());
+
+    int colorValue = settings->value("colorValue",0).toInt();
+    emit setVerticalSlider(colorValue);
+    setInt("colorValue",colorValue);
+
+
+    int ArgMin = settings->value("ArgMin",0).toInt();
+    emit setArgMin(ArgMin);
+    setInt("ArgMin",ArgMin);
+    int ArgMax = settings->value("ArgMax",1024).toInt();
+    emit setArgMax(ArgMax);
+    setInt("ArgMax",ArgMax);
+    int PhMin = settings->value("PhMin",-180).toInt();
+    emit setPhMin(PhMin);
+    setInt("PhMin",PhMin);
+
+    emit setMax(colorValue);
+    emit setAngle(-PhMin,PhMin);
+    emit setOffset((unsigned int)ArgMin,(unsigned int) ArgMax);
+
+
 
 
     emit setleBurstLen(settings->value("leBurstLen",1).toInt());
@@ -174,10 +222,25 @@ void Rcontrol::sresultReady(const Clowd &result){
     emit resultReady(result);
 }
 
+void Rcontrol::reInitDock(){
+    emit setArgMin(cInt["ArgMin"]);
+    emit setArgMax(cInt["ArgMax"]);
+    emit setPhMin(cInt["PhMin"]);
+
+}
+
 void Rcontrol::show(QString formName){
     if(formName=="mmSettings"){
         formsettings->setModal(false);
         formsettings->show();
+    } else if(formName=="mmPlotXX") {
+        plotterXX->setWindowTitle("Горизонтальная поляризация");
+        plotterXX->show();
+        plotterXX->plot();
+    } else if(formName=="mmPlotYY") {
+        plotterYY->setWindowTitle("Вертикальная поляризация");
+        plotterYY->show();
+        plotterYY->plot();
     }
 }
 void Rcontrol::leSubBufNum(int val){
@@ -279,6 +342,7 @@ void Rcontrol::zValueChanged(int val){
 void Rcontrol::verticalSliderChanged(int val){
     settings->value("colorValue",val);
     setInt("colorValue",val);
+    emit setMax(val);
 }
 void Rcontrol::sChangeInt(QString name, int val){
     settings->sync();
@@ -351,4 +415,19 @@ void Rcontrol::setDouble(QString name,double value){
 void Rcontrol::setString(QString name,QString value){
     settings->setValue(name,value);
     emit changeString(name,value);
+}
+void Rcontrol::ArgMinChanged(int val){
+    settings->setValue("ArgMin",val);
+    emit changeInt("ArgMin",val);
+    emit setOffset((unsigned int)val,(unsigned int) cInt["ArgMax"]);
+}
+void Rcontrol::ArgMaxChanged(int val){
+    settings->setValue("ArgMax",val);
+    emit changeInt("ArgMax",val);
+    emit setOffset((unsigned int)cInt["ArgMin"],(unsigned int) val);
+}
+void Rcontrol::PhMinChanged(int val){
+    settings->setValue("PhMin",val);
+    emit changeInt("PhMin",val);
+    emit setAngle(-val,val);
 }

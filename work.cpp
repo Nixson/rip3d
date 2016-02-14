@@ -1,9 +1,11 @@
 #include "work.h"
 #include <iostream>
 
-Work::Work()
+Work::Work(): MaxAngle(360), MinAngle(0), MaxOffset(BLOCKLANGTH), MinOffset(0), Size(0)
 {
     density = false;
+    plotWork = false;
+    rePlot = false;
 }
 void Work::Density(bool dens){
     density = dens;
@@ -17,9 +19,298 @@ void Work::doWork(const QByteArray &param){
     data = QByteArray(param);
     // берем 0, 16, 15, 31 блоки. Соединяем в строку и отправляем в кор обработку. 1024*4 блоков
     // внутри они разбираются и обрабатываются
-    convertCor();
+    Proc();
+}
+void Work::Proc(){
+    MathWorker *mWorker = new MathWorker();
+    mWorker->initPulse(cInt["leSubBufNum"],cDouble["leFreq"]);
+    int step = BLOCKLANGTH*32; // определяем количество отсчетов
+    int cntD = data.count();
+    bSize = cntD/step;
+    int bNum[4] = {0, 16, 15, 31};
+    //dataDouble = new double[cntD/8];
+    dataDouble.resize(cntD/8);
+    double *dataDoubleAddr = dataDouble.data();
+    for( unsigned int bStep = 0; bStep < bSize; bStep++){
+        //номер пачки
+        int packet = bStep*step;
+        // берем 0, 16, 15, 31 блоки
+        //0
+        for( int pStep = 0; pStep < 4; pStep++){
+            for( int sStep = 0; sStep < BLOCKLANGTH; sStep++){
+                int vl = (unsigned int)data[packet+bNum[pStep]+sStep];
+                if(vl < 0) vl += MAXBYTE;
+                *dataDoubleAddr++ = (double)(vl - 128);
+            }
+        }
+    }
+    mWorker->Buffer(dataDouble,0,bSize);
+    connect(mWorker,&MathWorker::result,this,&Work::result);
+    connect(mWorker,&MathWorker::resultXX,this,&Work::resultXX);
+    connect(mWorker,&MathWorker::resultYY,this,&Work::resultYY);
+
+    mWorker->run();
+}
+void Work::resultXX(const MathVector &buf){
+    IntVector resultA;
+    IntVector resultY;
+    resultA.resize(bSize*BLOCKLANGTH);
+    resultY.resize(bSize*BLOCKLANGTH);
+    unsigned int *dataResultInt = resultA.data();
+    unsigned int *dataResultIntY = resultY.data();
+    unsigned int bStepNormal = 0;
+    for( unsigned int bStep = 0; bStep < bSize*BLOCKLANGTH; bStep++){
+            *(dataResultInt++) = (unsigned int)round(buf[bStepNormal]);
+            bStepNormal++;
+            *(dataResultIntY++) = (unsigned int)round(buf[bStepNormal]);
+            bStepNormal++;
+    }
+    emit ShowXX(resultA,resultY);
+}
+void Work::resultYY(const MathVector &buf){
+    IntVector resultA;
+    IntVector resultY;
+    resultA.resize(bSize*BLOCKLANGTH);
+    resultY.resize(bSize*BLOCKLANGTH);
+    unsigned int *dataResultInt = resultA.data();
+    unsigned int *dataResultIntY = resultY.data();
+    unsigned int bStepNormal = 0;
+    for( unsigned int bStep = 0; bStep < bSize*BLOCKLANGTH; bStep++){
+            *(dataResultInt++) = (unsigned int)round(buf[bStepNormal]);
+            bStepNormal++;
+            *(dataResultIntY++) = (unsigned int)round(buf[bStepNormal]);
+            bStepNormal++;
+    }
+    emit ShowYY(resultA,resultY);
+}
+void Work::result(const MathVector &buf){
+    histA.clear();
+    histY.clear();
+    histA.resize(bSize*BLOCKLANGTH);
+    histY.resize(bSize*BLOCKLANGTH);
+    unsigned int *dataResultInt = histA.data();
+    unsigned int *dataResultIntY = histY.data();
+    unsigned int bStepNormal = 0;
+    MaxColor = 0;
+    for( unsigned int bStep = 0; bStep < bSize*BLOCKLANGTH; bStep++){
+            unsigned int dResult = (unsigned int)round(buf[bStepNormal]);
+            *(dataResultInt++) = dResult;
+            bStepNormal++;
+            *(dataResultIntY++) = (unsigned int)round(buf[bStepNormal]);
+            bStepNormal++;
+            if(MaxColor < dResult){
+                MaxColor = dResult;
+            }
+    }
+    MaxColor = MaxColor*0.7;
+    emit MaxColorValue(MaxColor);
+    Size = (unsigned int)bSize;
+    plot();
+}
+void Work::setAngle(int min, int max){
+    MinAngle = (unsigned int)min+180;
+    MaxAngle = (unsigned int)max+180;
+    delY = 180.0f/max;
+    plot();
+}
+void Work::setOffset(unsigned int min, unsigned int max){
+    MinOffset = min;
+    MaxOffset = max;
+    plot();
+}
+void Work::setMax(unsigned int b){
+    MaxBarier = b;
+    plot();
+}
+void Work::plot(){
+    if(histA.length() == 0)
+        return;
+    if(plotWork){
+        rePlot = true;
+        return;
+    }
+    emit logLine1("Start");
+    rePlot = false;
+    plotWork = true;
+
+    sObject.clear();
+    //размер = длина * ширина * 24 точки по 6 координат в каждой
+    sObject.resize( (MaxOffset-MinOffset) * Size * 144);
+
+    sObjectLink = sObject.data();
+
+
+    centerX = (GLfloat)Size/2;
+    centerY =  MinAngle + (GLfloat) ( MaxAngle - MinAngle ) /2;
+    centerZ = MinOffset + (GLfloat) ( MaxOffset - MinOffset ) /2;
+
+    for( unsigned int x = 0; x < Size; x++){
+        //номер пачки
+        int packet = x*BLOCKLANGTH;
+        for(unsigned int z = MinOffset; z < MaxOffset; z++){
+            unsigned int y = histY[packet+z];
+            if(y >= MinAngle && y <= MaxAngle){
+                unsigned int color = histA[packet+z];
+                if(color >= MaxBarier){
+                    plotFlower((int)x,(int)y,(int)z,color);
+                }
+            }
+        }
+
+    }
+    emit resultReady(sObject);
+    emit logLine1("Done");
+    plotWork = false;
+    if(rePlot){
+        plot();
+    }
+
+}
+void Work::appendPoint(int x,int y,int z, int color){
+    *(sObjectLink++) = (centerX-x)/MAXBYTEFLOAT;
+    *(sObjectLink++) = (centerY-y)/128.0f;
+    *(sObjectLink++) = -(centerZ-z)/MAXBYTEFLOAT;
+    if(color == 0) {
+        *(sObjectLink++) = 0;
+        *(sObjectLink++) = 0;
+        *(sObjectLink++) = 0;
+    }
+    else {
+        *(sObjectLink++) = (float)color/MAXBYTEFLOAT;
+        *(sObjectLink++) = 1.0f;
+        *(sObjectLink++) = (float)(MAXBYTEFLOAT - color)/MAXBYTEFLOAT;
+    }
+}
+void Work::plotFlower(int x,int y,int z, unsigned int color){
+    double NormalColor = (double)(MaxColor);
+    int nColor = (int)MAXBYTE*((double)color)/NormalColor;
+    if(nColor > MAXBYTE)
+        nColor = MAXBYTE;
+    //верх
+    appendPoint(x-1,y-1,z-1,nColor);
+    appendPoint(x+1,y-1,z-1,nColor);
+    appendPoint(x-1,y+1,z-1,nColor);
+    appendPoint(x+1,y+1,z-1,nColor);
+    appendPoint(x+1,y-1,z-1,nColor);
+    appendPoint(x-1,y+1,z-1,nColor);
+    //низ
+    appendPoint(x-1,y-1,z+1,nColor);
+    appendPoint(x+1,y-1,z+1,nColor);
+    appendPoint(x-1,y+1,z+1,nColor);
+    appendPoint(x+1,y+1,z+1,nColor);
+    appendPoint(x+1,y-1,z+1,nColor);
+    appendPoint(x-1,y+1,z+1,nColor);
+    //перед
+    appendPoint(x-1,y-1,z-1,nColor);
+    appendPoint(x+1,y-1,z-1,nColor);
+    appendPoint(x-1,y-1,z+1,nColor);
+    appendPoint(x+1,y-1,z+1,nColor);
+    appendPoint(x+1,y-1,z-1,nColor);
+    appendPoint(x-1,y-1,z+1,nColor);
+    // зад
+    appendPoint(x-1,y+1,z-1,nColor);
+    appendPoint(x+1,y+1,z-1,nColor);
+    appendPoint(x-1,y+1,z+1,nColor);
+    appendPoint(x+1,y+1,z+1,nColor);
+    appendPoint(x+1,y+1,z-1,nColor);
+    appendPoint(x-1,y+1,z+1,nColor);
+    //лево
+    appendPoint(x-1,y-1,z-1,nColor);
+    appendPoint(x-1,y+1,z-1,nColor);
+    appendPoint(x-1,y-1,z+1,nColor);
+    appendPoint(x-1,y+1,z+1,nColor);
+    appendPoint(x-1,y+1,z-1,nColor);
+    appendPoint(x-1,y-1,z+1,nColor);
+    //право
+    appendPoint(x-1,y-1,z-1,nColor);
+    appendPoint(x-1,y+1,z-1,nColor);
+    appendPoint(x-1,y-1,z+1,nColor);
+    appendPoint(x-1,y+1,z+1,nColor);
+    appendPoint(x-1,y+1,z-1,nColor);
+    appendPoint(x-1,y-1,z+1,nColor);
+
+    return;
+    // 1. z-1,y-1   z-1,y
+    unsigned int p1 = 0;
+    unsigned int p2 = 0;
+    unsigned int p3 = 0;
+    unsigned int p4 = 0;
+    unsigned int p5 = 0;
+    unsigned int p6 = 0;
+    unsigned int p7 = 0;
+    unsigned int p8 = 0;
+    unsigned int bColor = 0;
+    int bY = 0;
+    // p1, p2, p3
+    if(z > 0) {
+        unsigned int histAV = histA[x*BLOCKLANGTH+z-1];
+        if(histAV < MaxBarier) bColor = 0;
+        else
+            bColor = (unsigned int)MAXBYTE*(histAV)/NormalColor;
+        bY = (int)histY[x*BLOCKLANGTH+z-1];
+    }
+    if(bY > 0){
+        if(y == bY-1){
+            p1 = bColor;
+        }
+    }
+    if( y == bY )
+        p2 = bColor;
+    if( y == bY+1 )
+        p3 = bColor;
+    // p4, p8 - всегда == 0
+    // p5, p6, p7
+    bColor = 0;
+    if(z < BLOCKLANGTH-1) {
+        unsigned int histAV = histA[x*BLOCKLANGTH+z+1];
+        if(histAV < MaxBarier) bColor = 0;
+        else
+            bColor = (unsigned int)MAXBYTE*(histAV)/NormalColor;
+        bY = (int)histY[x*BLOCKLANGTH+z+1];
+    }
+    if(y==bY+1)
+        p5 = bColor;
+    if(y==bY)
+        p6 = bColor;
+    if(bY > 0)
+        if(y==bY-1)
+            p7 = bColor;
+    // 1 треугольник
+    appendPoint(x,y-1,z-1,p1);
+    appendPoint(x,y,z-1,p2);
+    appendPoint(x,y,z,nColor);
+    // 2 треугольник
+    appendPoint(x,y,z-1,p2);
+    appendPoint(x,y+1,z-1,p3);
+    appendPoint(x,y,z,nColor);
+    // 3 треугольник
+    appendPoint(x,y+1,z-1,p3);
+    appendPoint(x,y+1,z,p4);
+    appendPoint(x,y,z,nColor);
+    // 4 треугольник
+    appendPoint(x,y+1,z,p4);
+    appendPoint(x,y+1,z+1,p5);
+    appendPoint(x,y,z,nColor);
+    // 5 треугольник
+    appendPoint(x,y+1,z+1,p5);
+    appendPoint(x,y,z+1,p6);
+    appendPoint(x,y,z,nColor);
+    // 6 треугольник
+    appendPoint(x,y,z+1,p6);
+    appendPoint(x,y-1,z+1,p7);
+    appendPoint(x,y,z,nColor);
+    // 7 треугольник
+    appendPoint(x,y-1,z+1,p7);
+    appendPoint(x,y-1,z,p8);
+    appendPoint(x,y,z,nColor);
+    // 8 треугольник
+    appendPoint(x,y-1,z,p8);
+    appendPoint(x,y-1,z-1,p1);
+    appendPoint(x,y,z,nColor);
+//    sObjectLink++;
 }
 void Work::convertLast(){
+    /*
     dt = QDateTime::currentDateTime();
     emit logLine1(dt.toString()+" Обрабатываем");
     emit logLine2("результат");
@@ -29,58 +320,47 @@ void Work::convertLast(){
     dataResult2.clear();
 
     double maxColor = 0;
-    for( int bStep = 0; bStep < bSize; bStep++){
-        int packet = bStep*BLOCKLANGTH;
-        for(int zPos = 0; zPos < BLOCKLANGTH; zPos++){
-            double dResult = dataResult0[packet+zPos];
-            if(maxColor < dResult)
-                maxColor = dResult;
-        }
+    unsigned int bStepNormal = 0;
+    unsigned int bMaxSize = bSize*BLOCKLANGTH;
+    for( unsigned int bStep = 0; bStep < bMaxSize; bStep++){
+        double dResult = dataResult0[bStepNormal];
+        if(maxColor < dResult)
+            maxColor = dResult;
+        bStepNormal+=2;
     }
-    maxColor =sqrt(maxColor)*0.8;
+    int maxYpos = 0;
+    maxColor =maxColor*0.5;
     unsigned int *PositionMax = new unsigned int[MAXBYTE];
     memset(PositionMax,0,MAXBYTE*sizeof(unsigned int));
     unsigned int *dataResultInt = new unsigned int[bSize*BLOCKRANGE];
+    unsigned int *dataResultIntY = new unsigned int[bSize*BLOCKRANGE];
     memset(dataResultInt,0,bSize*BLOCKRANGE*sizeof(unsigned int));
+    memset(dataResultIntY,0,bSize*BLOCKRANGE*sizeof(unsigned int));
     //обходим отсчеты
-    for (int bStep = 0; bStep < bSize; bStep++) {
-        //номер пачки
-        int packet = bStep*BLOCKLANGTH;
-        //пока Y = 0;
-        //обходим Z;
-
-
-        for(int zPos = 0; zPos < BLOCKLANGTH; zPos++){
-            int dResult = (int)(sqrt(dataResult0[packet+zPos])*MAXBYTE/maxColor);
+    bStepNormal = 0;
+    for( unsigned int bStep = 0; bStep < bMaxSize; bStep++){
+            int dResult = (int)((dataResult0[bStepNormal])*MAXBYTE/maxColor);
             if (dResult > MAXBYTE)
                 dResult = MAXBYTE;
-//            unsigned int color = (unsigned int)round(MAXBYTE*dResult/maxColor);
-            dataResultInt[packet+zPos] = dResult;
+    //            unsigned int color = (unsigned int)round(MAXBYTE*dResult/maxColor);
+            dataResultInt[bStep] = dResult;
             PositionMax[dResult] += 6;
-            /*for( unsigned int cColor = color; cColor <= MAXBYTE; cColor++)
-                PositionMax[cColor] += 6;*/
-        }
+            bStepNormal++;
+            int yResult = (int)dataResult0[bStepNormal];
+            dataResultIntY[bStep] = yResult;
+            if(maxYpos < yResult)
+                maxYpos = yResult;
+            bStepNormal++;
+
     }
     dataResult0.clear();
-    /*int st = 0;
-    for (int bSteps = 0; bSteps < bSize; bSteps++) {
-        int TestBlockRe[BLOCKLANGTH];
-    //    double TestBlockIm[BLOCKLANGTH];
-        for(int i = 0; i < BLOCKLANGTH; i++){
-            TestBlockRe[i] = dataResultInt[i+bSteps*BLOCKLANGTH];
-      //      TestBlockIm[i] = ResYYAbs[i];
-        }
-        st++;
-    }*/
     Clowd c_data;
 
     GLfloat *pDColor[MAXBYTE];
     for(unsigned int pc = 0; pc < MAXBYTE; pc++){
         if(PositionMax[pc] > 0){
             int max = (int)PositionMax[pc];
-            //c_data[pc].reserve(PositionMax[pc]);
             c_data[pc].resize(max);
-//            GLfloat *pD =
             pDColor[pc] = c_data[pc].data();
         }
     }
@@ -88,27 +368,28 @@ void Work::convertLast(){
 
     //обходим отсчеты
     int maxXpos = bSize/2;
-    int maxYpos = 0;
-    int maxZpos = BLOCKLANGTH/2;
+    int offset = BLOCKLANGTH/200;
+    int start = 60*offset;
+    int maxZpos = (BLOCKLANGTH-start)/2;
+    maxYpos = maxYpos/2;
     int progressB = 0, lastprogress = 0;
     for (int bStep = 0; bStep < bSize; bStep++) {
         //номер пачки
         int packet = bStep*BLOCKLANGTH;
         //пока Y = 0;
         //обходим Z;
-        for(int zPos = 0; zPos < BLOCKLANGTH; zPos++){
+        for(int zPos = 0; zPos < BLOCKLANGTH-start; zPos++){
             int color = dataResultInt[packet+zPos];
-            int y = 0;
+            int y = dataResultIntY[packet+zPos];//+color/4;
+           // y = 0;
             *(pDColor[color])++ = (maxXpos - bStep)/MAXBYTEFLOAT;
-            *(pDColor[color])++ = (maxYpos - y)/MAXBYTEFLOAT;
+            *(pDColor[color])++ = (y)/MAXBYTEFLOAT;
 //            *(pDColor[color])++ = 0.0f;
             *(pDColor[color])++ = (maxZpos - zPos)/MAXBYTEFLOAT;
             *(pDColor[color])++ = color/MAXBYTEFLOAT;
-            *(pDColor[color])++ = 0.0f;
+            *(pDColor[color])++ = color/MAXBYTEFLOAT;
             *(pDColor[color])++ = (float)(MAXBYTEFLOAT - color)/MAXBYTEFLOAT;
-/*            for( int cColor = color; cColor <= MAXBYTE; cColor++){
-            }
-            */
+
         }
         progressB = 10 * (bStep) / bSize;
         if(lastprogress!=progressB){
@@ -118,6 +399,7 @@ void Work::convertLast(){
         }
     }
     delete[] dataResultInt;
+    delete[] dataResultIntY;
     dt = QDateTime::currentDateTime();
     emit logLine1(dt.toString()+" Готово");
 
@@ -125,6 +407,7 @@ void Work::convertLast(){
     emit logLine2(QString::number(maxColor));
 
     emit resultReady(c_data);
+    */
 }
 void Work::smooth(double *input, double *output, int n, int window)
 {
@@ -202,7 +485,7 @@ void Work::convertCor(){
     dataDouble.resize(cntD/8);
     double *dataDoubleAddr = dataDouble.data();
     unsigned int numData = 0;
-    for( int bStep = 0; bStep < bSize; bStep++){
+    for(unsigned int bStep = 0; bStep < bSize; bStep++){
         //номер пачки
         int packet = bStep*step;
         // берем 0, 16, 15, 31 блоки
@@ -242,7 +525,7 @@ void Work::convertCor(){
 
 }
 void Work::convert1024(){
-    int progressB = 0;
+    /*int progressB = 0;
     int lastprogress = 0;
     Clowd c_data;
     int PositionMax[MAXBYTE];
@@ -309,11 +592,11 @@ void Work::convert1024(){
     emit progress(100);
     emit logLine1("");
     emit logLine2("");
-    emit resultReady(c_data);
+    emit resultReady(c_data);*/
 
 }
 void Work::convert(){
-    emit logLine1("Определение максимумов");
+    /*emit logLine1("Определение максимумов");
     int progressB = 0;
     int lastprogress = 0;
     Clowd c_data;
@@ -414,7 +697,7 @@ void Work::convert(){
     }
     emit logLine1("");
     emit logLine2("");
-    emit resultReady(c_data);
+    emit resultReady(c_data);*/
 }
 void Work::sChangeInt(QString name, int val){
     cInt[name] = val;

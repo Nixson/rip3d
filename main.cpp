@@ -15,6 +15,9 @@ int main(int argc, char *argv[])
         QSurfaceFormat::setDefaultFormat(format);
     qRegisterMetaType<Clowd>("Clowd");
     qRegisterMetaType<MathVector>("MathVector");
+    qRegisterMetaType<IntVector>("IntVector");
+    qRegisterMetaType<IntVector>("IntVector&");
+
     QCoreApplication::setOrganizationName("Nixson LLC");
     QCoreApplication::setOrganizationDomain("nixson.ru");
     QCoreApplication::setApplicationName("Rip3d");

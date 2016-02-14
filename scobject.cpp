@@ -20,6 +20,12 @@ void ScObject::setMax(int color){
 }
 
 void ScObject::loadDataImage(){
+    m_data = c_data;
+    int size = m_data.size();
+/*    GLfloat *s = c_data.data();
+    GLfloat *p = m_data.data();
+    memcpy(p,s, size * sizeof(GLfloat) );*/
+    m_count = size;
     /*int size = c_data[maxColor].size();
     GLfloat *s = c_data[maxColor].data();
     GLfloat *p = m_data.data();
@@ -28,7 +34,7 @@ void ScObject::loadDataImage(){
     return;
     */
 
-    int size = 0;
+    /*int size = 0;
     int sMax = maxColor+10;
     if(sMax > MAXBYTE) sMax = MAXBYTE;
     for( int i = maxColor; i < MAXBYTE; i++){
@@ -43,7 +49,7 @@ void ScObject::loadDataImage(){
         GLfloat *p = m_data.data() + m_count;
         memcpy(p,s, size * sizeof(GLfloat) );
         m_count += size;
-    }
+    }*/
 }
 void ScObject::editData(const Clowd &result){
     c_data = result;
@@ -51,7 +57,5 @@ void ScObject::editData(const Clowd &result){
 
 }
 void ScObject::clearData(){
-    for(int i = 0; i < MAXBYTE; i++){
-        c_data[i].clear();
-    }
+    c_data.clear();
 }

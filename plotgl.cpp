@@ -89,25 +89,24 @@ static const char *vertexShaderSource =
     "uniform mat4 projMatrix;\n"
     "uniform mat4 mvMatrix;\n"
     "uniform mat3 normalMatrix;\n"
-    "varying highp vec3 vColor;\n"
+    "varying highp vec4 vColor;\n"
     "void main() {\n"
     "   vert = vertex.xyz;\n"
     "   vertNormal = normalMatrix * vertex.xyz;\n"
     "   gl_Position = projMatrix * mvMatrix * vertex;\n"
-    "   vColor = aVertexColor;\n"
+    "   vColor = vec4(aVertexColor.x,0,aVertexColor.z,aVertexColor.y);\n"
     "}\n";
 
 static const char *fragmentShaderSource =
     "varying highp vec3 vert;\n"
     "varying highp vec3 vertNormal;\n"
     "uniform highp vec3 lightPos;\n"
-    "varying highp vec3 vColor;\n"
+    "varying highp vec4 vColor;\n"
     "void main() {\n"
     "   highp vec3 L = normalize(lightPos - vert);\n"
     "   highp float NL = max(dot(normalize(vertNormal), L), 0.0);\n"
-    "   highp vec3 color = vColor;\n"
-    "   highp vec3 col = clamp(color * 0.85 + color * 0.95 * NL, 0.0, 1.0);\n"
-    "   gl_FragColor = vec4(col, 0.2);\n"
+    "   highp vec4 col = clamp(vColor * 0.85 + vColor * 0.95 * NL, 0.0, 1.0);\n"
+    "   gl_FragColor = col;\n"
     "}\n";
 
 
@@ -181,6 +180,7 @@ void PlotGl::paintGL()
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glEnable(GL_POINT_SMOOTH);
     /*glEnable(GL_CULL_FACE);*/
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     m_camera.setToIdentity();
     m_camera.translate(0, 0, - m_scale);
@@ -196,7 +196,8 @@ void PlotGl::paintGL()
     QMatrix3x3 normalMatrix = m_world.normalMatrix();
     m_program->setUniformValue(m_normalMatrixLoc, normalMatrix);
 
-    glDrawArrays(GL_POINTS, 0, m_Sc->vertexCount());
+//    glDrawArrays(GL_POINTS, 0, m_Sc->vertexCount());
+    glDrawArrays(GL_TRIANGLES, 0, m_Sc->vertexCount());
     //vaoBinder.release();
 
 

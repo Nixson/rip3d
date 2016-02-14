@@ -6,6 +6,8 @@ formSettings::formSettings(QWidget *parent) :
     ui(new Ui::formSettings)
 {
     ui->setupUi(this);
+    this->setWindowFlags(Qt::WindowStaysOnTopHint);
+
 }
 
 formSettings::~formSettings()

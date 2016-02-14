@@ -13,14 +13,16 @@
 #include <QVector>
 #include <cmath>
 
-
+/*
 typedef struct Clowd {
     QVector<GLfloat>& operator[](int i) { return byte[i]; }
     QVector<GLfloat> byte[MAXBYTE];
 } Clowd;
-
+*/
 
 typedef QVector<double> MathVector;
+typedef QVector<GLfloat> Clowd;
+typedef QVector <unsigned int> IntVector;
 
 const unsigned int AVG_DATA_LEN=1024*8*4;
 const unsigned int MAX_PKT_DATA_LEN=1024;

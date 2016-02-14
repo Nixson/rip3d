@@ -8,6 +8,7 @@
 #include "cloudtypelist.h"
 #include "mathworker.h"
 #include <iostream>
+#include "plotter.h"
 
 class Rcontrol : public QObject
 {
@@ -20,6 +21,7 @@ public:
     void init();
 
     void show(QString);
+    void reInitDock();
 
     int     getInt(QString);
     bool    getBool(QString);
@@ -33,6 +35,9 @@ public:
 
 signals:
     void operate(const QByteArray &param);
+    void setMax(int);
+    void setAngle(int,int);
+    void setOffset(unsigned int, unsigned int);
     void Density(bool);
     void progress(int);
     void progressTimer();
@@ -44,6 +49,9 @@ signals:
     void setyValue(int);
     void setzValue(int);
     void setVerticalSlider(int);
+    void setArgMin(int);
+    void setArgMax(int);
+    void setPhMin(int);
     void setleSubBufNum(int);
     void setleBurstLen(int);
 
@@ -70,8 +78,13 @@ signals:
     void changeDouble(QString,double);
     void changeBool(QString,bool);
     void changeString(QString,QString);
+    void MaxColorValue(int);
 
 public slots:
+
+    void ShowXX(IntVector &amp,IntVector &ph);
+    void ShowYY(IntVector &amp,IntVector &ph);
+
     void doOperate(const QByteArray &param);
     void doDensity(bool);
     void sprogress(int);
@@ -79,11 +92,15 @@ public slots:
     void slogLine1(QString);
     void slogLine2(QString);
     void sresultReady(const Clowd &result);
+    void sMaxColorValue(int val);
 
     void xValueChanged(int);
     void yValueChanged(int);
     void zValueChanged(int);
     void verticalSliderChanged(int);
+    void ArgMinChanged(int);
+    void ArgMaxChanged(int);
+    void PhMinChanged(int);
     void leSubBufNum(int);
     void leBurstLen(int);
 
@@ -119,6 +136,8 @@ private:
     QMap <QString, bool> cBool;
     QMap <QString, QString> cString;
     formSettings *formsettings;
+    Plotter *plotterXX;
+    Plotter *plotterYY;
 };
 
 #endif // RCONTROL_H

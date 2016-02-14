@@ -14,6 +14,7 @@ Rip3d::Rip3d(QWidget *parent) :
     first = true;
 
     ui->setupUi(this);
+    ui->dockWidget->hide();
     sc = new ScObject;
     plotGl = new PlotGl(sc);
     ui->vlLayout->addWidget(plotGl);
@@ -43,12 +44,34 @@ Rip3d::Rip3d(QWidget *parent) :
     connect(this,&Rip3d::zValueChanged,&control,&Rcontrol::zValueChanged);
     connect(&control,&Rcontrol::setzValue,this,&Rip3d::zRotationChanged);
 
+    connect(this,&Rip3d::ArgMinChanged,&control,&Rcontrol::ArgMinChanged);
+    connect(&control,&Rcontrol::setArgMin,this,&Rip3d::setArgMin);
+    connect(this,&Rip3d::ArgMaxChanged,&control,&Rcontrol::ArgMaxChanged);
+    connect(&control,&Rcontrol::setArgMax,this,&Rip3d::setArgMax);
+    connect(this,&Rip3d::PhMinChanged,&control,&Rcontrol::PhMinChanged);
+    connect(&control,&Rcontrol::setPhMin,this,&Rip3d::setPhMin);
+
     connect(this,&Rip3d::verticalSliderChanged,&control,&Rcontrol::verticalSliderChanged);
     connect(&control,&Rcontrol::setVerticalSlider,this,&Rip3d::on_verticalSlider_valueChanged);
+
+    connect(&control,&Rcontrol::MaxColorValue,this,&Rip3d::MaxColorValue);
 
     control.init();
     first = false;
 
+}
+void Rip3d::MaxColorValue(int val){
+    ui->verticalSlider->setMaximum(val);
+    ui->colorValue->setMaximum(val);
+}
+void Rip3d::setArgMin(int val){
+    ui->ArgMin->setValue(val);
+}
+void Rip3d::setArgMax(int val){
+    ui->ArgMax->setValue(val);
+}
+void Rip3d::setPhMin(int val){
+    ui->PhMin->setValue(val);
 }
 void Rip3d::handleResults(const Clowd &result){
     sc->editData(result);
@@ -170,4 +193,34 @@ void Rip3d::on_verticalSlider_valueChanged(int value)
 void Rip3d::on_mmSettings_triggered()
 {
     control.show("mmSettings");
+}
+
+void Rip3d::on_ArgMin_valueChanged(int value)
+{
+    emit ArgMinChanged(value);
+}
+
+void Rip3d::on_ArgMax_valueChanged(int value)
+{
+    emit ArgMaxChanged(value);
+}
+
+void Rip3d::on_PhMin_valueChanged(int value)
+{
+    emit PhMinChanged(value);
+}
+
+void Rip3d::on_mmplotXX_triggered()
+{
+    control.show("mmPlotXX");
+}
+
+void Rip3d::on_mmplotYY_triggered()
+{
+    control.show("mmPlotYY");
+}
+
+void Rip3d::on_mmShowDock_triggered()
+{
+    control.reInitDock();
 }
