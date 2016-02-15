@@ -34,6 +34,8 @@ void Plotter::ShowDataVector(IntVector &amp,IntVector &ph){
     Amp = amp;
     Phase = ph;
     Size = Amp.size()/BLOCKLANGTH;
+    ui->spinBox->setMaximum(Size);
+    ui->horizontalSlider->setMaximum(Size);
     plot();
 }
 void Plotter::MaxColorValue(int color){
@@ -62,6 +64,7 @@ void Plotter::plot(){
     // set up the QCPColorMap:
     int nx = (int)AngleMax-AngleMin;
     int ny = OffsetMax-OffsetMin;
+    double Max = 0;
     colorMap->data()->setSize(nx, ny); // we want the color map to have nx * ny data points
     colorMap->data()->setRange(QCPRange((int)AngleMin-180, (int)AngleMax-180), QCPRange(OffsetMin, OffsetMax)); // and span the coordinate range -4..4 in both key (x) and value (y) dimensions
     int Acc = Accum;
@@ -86,11 +89,11 @@ void Plotter::plot(){
                     A+= sqrt(AmpR);
             }
         }
+        if(Max < A) Max = A;
         colorMap->data()->setCell(xIndex, yIndex, A);
       }
     }
     colorMap->setGradient(QCPColorGradient::gpThermal);
-//    colorMap->setGradient(QCPColorGradient::gpGrayscale);
     colorMap->rescaleDataRange();
     customPlot->rescaleAxes();
     customPlot->replot();
@@ -105,5 +108,11 @@ void Plotter::on_spinBox_valueChanged(int arg1)
 void Plotter::on_spinBox_2_valueChanged(int arg1)
 {
     Accum = (unsigned int) arg1;
+    plot();
+}
+
+void Plotter::on_horizontalSlider_valueChanged(int value)
+{
+    Lay = (unsigned int) value;
     plot();
 }

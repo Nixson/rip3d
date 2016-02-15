@@ -42,3 +42,4 @@ FORMS    += rip3d.ui \
     formsettings.ui \
     plotter.ui \
     measuresettings.ui
+

@@ -31,6 +31,7 @@ void Work::Proc(){
     //dataDouble = new double[cntD/8];
     dataDouble.resize(cntD/8);
     double *dataDoubleAddr = dataDouble.data();
+
     for( unsigned int bStep = 0; bStep < bSize; bStep++){
         //номер пачки
         int packet = bStep*step;
@@ -38,7 +39,7 @@ void Work::Proc(){
         //0
         for( int pStep = 0; pStep < 4; pStep++){
             for( int sStep = 0; sStep < BLOCKLANGTH; sStep++){
-                int vl = (unsigned int)data[packet+bNum[pStep]+sStep];
+                int vl = (unsigned int)data[packet+bNum[pStep]*BLOCKLANGTH+sStep];
                 if(vl < 0) vl += MAXBYTE;
                 *dataDoubleAddr++ = (double)(vl - 128);
             }
@@ -54,17 +55,22 @@ void Work::Proc(){
 void Work::resultXX(const MathVector &buf){
     IntVector resultA;
     IntVector resultY;
+    //QVector<double> resultYd;
     resultA.resize(bSize*BLOCKLANGTH);
     resultY.resize(bSize*BLOCKLANGTH);
+    //resultYd.resize(bSize*BLOCKLANGTH);
     unsigned int *dataResultInt = resultA.data();
     unsigned int *dataResultIntY = resultY.data();
+    //double *dataResultIntYd = resultYd.data();
     unsigned int bStepNormal = 0;
     for( unsigned int bStep = 0; bStep < bSize*BLOCKLANGTH; bStep++){
             *(dataResultInt++) = (unsigned int)round(buf[bStepNormal]);
             bStepNormal++;
             *(dataResultIntY++) = (unsigned int)round(buf[bStepNormal]);
+            //*(dataResultIntYd++) = round(buf[bStepNormal]);
             bStepNormal++;
     }
+
     emit ShowXX(resultA,resultY);
 }
 void Work::resultYY(const MathVector &buf){
@@ -105,12 +111,13 @@ void Work::result(const MathVector &buf){
     MaxColor = MaxColor*0.7;
     emit MaxColorValue(MaxColor);
     Size = (unsigned int)bSize;
+    emit setSizeBlock(Size);
     plot();
 }
 void Work::setAngle(int min, int max){
     MinAngle = (unsigned int)min+180;
     MaxAngle = (unsigned int)max+180;
-    delY = 180.0f/max;
+    delY = 32.0f/(181-max);
     plot();
 }
 void Work::setOffset(unsigned int min, unsigned int max){
@@ -143,6 +150,7 @@ void Work::plot(){
     centerX = (GLfloat)Size/2;
     centerY =  MinAngle + (GLfloat) ( MaxAngle - MinAngle ) /2;
     centerZ = MinOffset + (GLfloat) ( MaxOffset - MinOffset ) /2;
+    int realSize = 0;
 
     for( unsigned int x = 0; x < Size; x++){
         //номер пачки
@@ -153,11 +161,13 @@ void Work::plot(){
                 unsigned int color = histA[packet+z];
                 if(color >= MaxBarier){
                     plotFlower((int)x,(int)y,(int)z,color);
+                    realSize++;
                 }
             }
         }
 
     }
+    sObject.resize(realSize*24*6);
     emit resultReady(sObject);
     emit logLine1("Done");
     plotWork = false;
@@ -168,7 +178,7 @@ void Work::plot(){
 }
 void Work::appendPoint(int x,int y,int z, int color){
     *(sObjectLink++) = (centerX-x)/MAXBYTEFLOAT;
-    *(sObjectLink++) = (centerY-y)/128.0f;
+    *(sObjectLink++) = (centerY-y)/(MAXBYTEFLOAT*delY);
     *(sObjectLink++) = -(centerZ-z)/MAXBYTEFLOAT;
     if(color == 0) {
         *(sObjectLink++) = 0;
@@ -177,7 +187,7 @@ void Work::appendPoint(int x,int y,int z, int color){
     }
     else {
         *(sObjectLink++) = (float)color/MAXBYTEFLOAT;
-        *(sObjectLink++) = 1.0f;
+        *(sObjectLink++) = 0.0f;
         *(sObjectLink++) = (float)(MAXBYTEFLOAT - color)/MAXBYTEFLOAT;
     }
 }
@@ -186,128 +196,31 @@ void Work::plotFlower(int x,int y,int z, unsigned int color){
     int nColor = (int)MAXBYTE*((double)color)/NormalColor;
     if(nColor > MAXBYTE)
         nColor = MAXBYTE;
-    //верх
-    appendPoint(x-1,y-1,z-1,nColor);
-    appendPoint(x+1,y-1,z-1,nColor);
-    appendPoint(x-1,y+1,z-1,nColor);
-    appendPoint(x+1,y+1,z-1,nColor);
-    appendPoint(x+1,y-1,z-1,nColor);
-    appendPoint(x-1,y+1,z-1,nColor);
-    //низ
-    appendPoint(x-1,y-1,z+1,nColor);
-    appendPoint(x+1,y-1,z+1,nColor);
-    appendPoint(x-1,y+1,z+1,nColor);
-    appendPoint(x+1,y+1,z+1,nColor);
-    appendPoint(x+1,y-1,z+1,nColor);
-    appendPoint(x-1,y+1,z+1,nColor);
-    //перед
-    appendPoint(x-1,y-1,z-1,nColor);
-    appendPoint(x+1,y-1,z-1,nColor);
-    appendPoint(x-1,y-1,z+1,nColor);
-    appendPoint(x+1,y-1,z+1,nColor);
-    appendPoint(x+1,y-1,z-1,nColor);
-    appendPoint(x-1,y-1,z+1,nColor);
-    // зад
-    appendPoint(x-1,y+1,z-1,nColor);
-    appendPoint(x+1,y+1,z-1,nColor);
-    appendPoint(x-1,y+1,z+1,nColor);
-    appendPoint(x+1,y+1,z+1,nColor);
-    appendPoint(x+1,y+1,z-1,nColor);
-    appendPoint(x-1,y+1,z+1,nColor);
-    //лево
-    appendPoint(x-1,y-1,z-1,nColor);
-    appendPoint(x-1,y+1,z-1,nColor);
-    appendPoint(x-1,y-1,z+1,nColor);
-    appendPoint(x-1,y+1,z+1,nColor);
-    appendPoint(x-1,y+1,z-1,nColor);
-    appendPoint(x-1,y-1,z+1,nColor);
-    //право
-    appendPoint(x-1,y-1,z-1,nColor);
-    appendPoint(x-1,y+1,z-1,nColor);
-    appendPoint(x-1,y-1,z+1,nColor);
-    appendPoint(x-1,y+1,z+1,nColor);
-    appendPoint(x-1,y+1,z-1,nColor);
-    appendPoint(x-1,y-1,z+1,nColor);
+    appendPoint(x-1,y,z-1,nColor);
+    appendPoint(x+1,y,z-1,nColor);
+    appendPoint(x,y+1,z,nColor);
+    appendPoint(x-1,y,z+1,nColor);
+    appendPoint(x+1,y,z+1,nColor);
+    appendPoint(x,y+1,z,nColor);
+    appendPoint(x+1,y,z-1,nColor);
+    appendPoint(x+1,y,z+1,nColor);
+    appendPoint(x,y+1,z,nColor);
+    appendPoint(x-1,y,z-1,nColor);
+    appendPoint(x-1,y,z+1,nColor);
+    appendPoint(x,y+1,z,nColor);
 
-    return;
-    // 1. z-1,y-1   z-1,y
-    unsigned int p1 = 0;
-    unsigned int p2 = 0;
-    unsigned int p3 = 0;
-    unsigned int p4 = 0;
-    unsigned int p5 = 0;
-    unsigned int p6 = 0;
-    unsigned int p7 = 0;
-    unsigned int p8 = 0;
-    unsigned int bColor = 0;
-    int bY = 0;
-    // p1, p2, p3
-    if(z > 0) {
-        unsigned int histAV = histA[x*BLOCKLANGTH+z-1];
-        if(histAV < MaxBarier) bColor = 0;
-        else
-            bColor = (unsigned int)MAXBYTE*(histAV)/NormalColor;
-        bY = (int)histY[x*BLOCKLANGTH+z-1];
-    }
-    if(bY > 0){
-        if(y == bY-1){
-            p1 = bColor;
-        }
-    }
-    if( y == bY )
-        p2 = bColor;
-    if( y == bY+1 )
-        p3 = bColor;
-    // p4, p8 - всегда == 0
-    // p5, p6, p7
-    bColor = 0;
-    if(z < BLOCKLANGTH-1) {
-        unsigned int histAV = histA[x*BLOCKLANGTH+z+1];
-        if(histAV < MaxBarier) bColor = 0;
-        else
-            bColor = (unsigned int)MAXBYTE*(histAV)/NormalColor;
-        bY = (int)histY[x*BLOCKLANGTH+z+1];
-    }
-    if(y==bY+1)
-        p5 = bColor;
-    if(y==bY)
-        p6 = bColor;
-    if(bY > 0)
-        if(y==bY-1)
-            p7 = bColor;
-    // 1 треугольник
-    appendPoint(x,y-1,z-1,p1);
-    appendPoint(x,y,z-1,p2);
-    appendPoint(x,y,z,nColor);
-    // 2 треугольник
-    appendPoint(x,y,z-1,p2);
-    appendPoint(x,y+1,z-1,p3);
-    appendPoint(x,y,z,nColor);
-    // 3 треугольник
-    appendPoint(x,y+1,z-1,p3);
-    appendPoint(x,y+1,z,p4);
-    appendPoint(x,y,z,nColor);
-    // 4 треугольник
-    appendPoint(x,y+1,z,p4);
-    appendPoint(x,y+1,z+1,p5);
-    appendPoint(x,y,z,nColor);
-    // 5 треугольник
-    appendPoint(x,y+1,z+1,p5);
-    appendPoint(x,y,z+1,p6);
-    appendPoint(x,y,z,nColor);
-    // 6 треугольник
-    appendPoint(x,y,z+1,p6);
-    appendPoint(x,y-1,z+1,p7);
-    appendPoint(x,y,z,nColor);
-    // 7 треугольник
-    appendPoint(x,y-1,z+1,p7);
-    appendPoint(x,y-1,z,p8);
-    appendPoint(x,y,z,nColor);
-    // 8 треугольник
-    appendPoint(x,y-1,z,p8);
-    appendPoint(x,y-1,z-1,p1);
-    appendPoint(x,y,z,nColor);
-//    sObjectLink++;
+    appendPoint(x-1,y,z-1,nColor);
+    appendPoint(x+1,y,z-1,nColor);
+    appendPoint(x,y-1,z,nColor);
+    appendPoint(x-1,y,z+1,nColor);
+    appendPoint(x+1,y,z+1,nColor);
+    appendPoint(x,y-1,z,nColor);
+    appendPoint(x+1,y,z-1,nColor);
+    appendPoint(x+1,y,z+1,nColor);
+    appendPoint(x,y-1,z,nColor);
+    appendPoint(x-1,y,z-1,nColor);
+    appendPoint(x-1,y,z+1,nColor);
+    appendPoint(x,y-1,z,nColor);
 }
 void Work::convertLast(){
     /*

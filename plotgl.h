@@ -45,6 +45,7 @@ protected:
 
 private:
     void setupVertexAttribs();
+    void setupVertexAttribsLast();
 
     int m_xRot;
     int m_yRot;
@@ -55,7 +56,8 @@ private:
     QPoint m_lastPos;
     ScObject *m_Sc;
     QOpenGLVertexArrayObject m_vao;
-    QOpenGLBuffer m_ScVbo;
+    QOpenGLVertexArrayObject m_vaoLast;
+    QOpenGLBuffer m_ScVbo, m_ScVboLast;
     QOpenGLShaderProgram *m_program;
     int m_projMatrixLoc;
     int m_mvMatrixLoc;

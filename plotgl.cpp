@@ -94,7 +94,7 @@ static const char *vertexShaderSource =
     "   vert = vertex.xyz;\n"
     "   vertNormal = normalMatrix * vertex.xyz;\n"
     "   gl_Position = projMatrix * mvMatrix * vertex;\n"
-    "   vColor = vec4(aVertexColor.x,0,aVertexColor.z,aVertexColor.y);\n"
+    "   vColor = vec4(aVertexColor.x,aVertexColor.y,aVertexColor.z,1);\n"
     "}\n";
 
 static const char *fragmentShaderSource =
@@ -143,6 +143,16 @@ void PlotGl::initializeGL()
 
     setupVertexAttribs();
 
+    m_vaoLast.create();
+    QOpenGLVertexArrayObject::Binder vaoBinderLast(&m_vaoLast);
+
+    m_ScVboLast.create();
+    m_ScVboLast.bind();
+    m_ScVboLast.allocate(m_Sc->constDataLines(), m_Sc->countLines() * sizeof(GLfloat));
+    vaoBinderLast.rebind();
+    setupVertexAttribsLast();
+
+
     m_camera.setToIdentity();
     m_camera.translate(0, 0, -0.2);
 
@@ -160,10 +170,24 @@ void PlotGl::setupVertexAttribs()
     f->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), reinterpret_cast<void *>(3 * sizeof(GLfloat)));
     m_ScVbo.release();
 }
+void PlotGl::setupVertexAttribsLast()
+{
+    m_ScVboLast.bind();
+    QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
+    f->glEnableVertexAttribArray(0);
+    f->glEnableVertexAttribArray(1);
+    f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), 0);
+    f->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), reinterpret_cast<void *>(3 * sizeof(GLfloat)));
+    m_ScVboLast.release();
+}
 void PlotGl::updateSc(){
     m_ScVbo.release();
     m_ScVbo.bind();
     m_ScVbo.allocate(m_Sc->constData(), m_Sc->count() * sizeof(GLfloat));
+    setupVertexAttribs();
+    m_ScVboLast.release();
+    m_ScVboLast.bind();
+    m_ScVboLast.allocate(m_Sc->constDataLines(), m_Sc->countLines() * sizeof(GLfloat));
     setupVertexAttribs();
     m_program->release();
     update();
@@ -189,17 +213,22 @@ void PlotGl::paintGL()
     m_world.rotate(m_yRot / 16.0f, 0, 1, 0);
     m_world.rotate(m_zRot / 16.0f, 0, 0, 1);
 
-    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
     m_program->bind();
     m_program->setUniformValue(m_projMatrixLoc, m_proj);
     m_program->setUniformValue(m_mvMatrixLoc, m_camera * m_world);
     QMatrix3x3 normalMatrix = m_world.normalMatrix();
     m_program->setUniformValue(m_normalMatrixLoc, normalMatrix);
 
+    QOpenGLVertexArrayObject::Binder vaoBinder(&m_vao);
+
 //    glDrawArrays(GL_POINTS, 0, m_Sc->vertexCount());
     glDrawArrays(GL_TRIANGLES, 0, m_Sc->vertexCount());
-    //vaoBinder.release();
+    vaoBinder.release();
 
+    QOpenGLVertexArrayObject::Binder vaoBinderLast(&m_vaoLast);
+//    glDrawArrays(GL_POINTS, 0, m_Sc->vertexCount());
+    glDrawArrays(GL_LINES, 0, m_Sc->vertexCountLines());
+    vaoBinderLast.release();
 
     m_program->release();
 

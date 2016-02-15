@@ -37,6 +37,7 @@ Rip3d::Rip3d(QWidget *parent) :
     connect(this,&Rip3d::Density,&control,&Rcontrol::doDensity);
 
 
+
     connect(this,&Rip3d::xValueChanged,&control,&Rcontrol::xValueChanged);
     connect(&control,&Rcontrol::setxValue,this,&Rip3d::xRotationChanged);
     connect(this,&Rip3d::yValueChanged,&control,&Rcontrol::yValueChanged);
@@ -55,10 +56,17 @@ Rip3d::Rip3d(QWidget *parent) :
     connect(&control,&Rcontrol::setVerticalSlider,this,&Rip3d::on_verticalSlider_valueChanged);
 
     connect(&control,&Rcontrol::MaxColorValue,this,&Rip3d::MaxColorValue);
-
+    connect(&control,&Rcontrol::setSizeBlock,this,&Rip3d::setSizeBlock);
     control.init();
+    /*
+    connect(&control,&Rcontrol::setAngle,sc,&ScObject::setAngle);
+    connect(&control,&Rcontrol::setOffset,sc,&ScObject::setOffset);*/
+//    void setSizeBlock(unsigned int);
     first = false;
 
+}
+void Rip3d::setSizeBlock(int val){
+    sc->setSizeBlock(val);
 }
 void Rip3d::MaxColorValue(int val){
     ui->verticalSlider->setMaximum(val);
@@ -66,11 +74,14 @@ void Rip3d::MaxColorValue(int val){
 }
 void Rip3d::setArgMin(int val){
     ui->ArgMin->setValue(val);
+    sc->setOffset((unsigned int) val, (unsigned int) ui->ArgMax->value());
 }
 void Rip3d::setArgMax(int val){
     ui->ArgMax->setValue(val);
+    sc->setOffset((unsigned int) ui->ArgMin->value(), (unsigned int) val);
 }
 void Rip3d::setPhMin(int val){
+    sc->setAngle(-val,val);
     ui->PhMin->setValue(val);
 }
 void Rip3d::handleResults(const Clowd &result){
@@ -198,15 +209,19 @@ void Rip3d::on_mmSettings_triggered()
 void Rip3d::on_ArgMin_valueChanged(int value)
 {
     emit ArgMinChanged(value);
+    sc->setOffset((unsigned int) value, (unsigned int) ui->ArgMax->value());
+
 }
 
 void Rip3d::on_ArgMax_valueChanged(int value)
 {
     emit ArgMaxChanged(value);
+    sc->setOffset((unsigned int) ui->ArgMin->value(), (unsigned int) value);
 }
 
 void Rip3d::on_PhMin_valueChanged(int value)
 {
+    sc->setAngle(-value,value);
     emit PhMinChanged(value);
 }
 

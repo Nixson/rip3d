@@ -51,6 +51,7 @@ private:
     MathVector ResUlst;
     double *a0XX, *a1XX, *a0YY, *a1YY;
     double *DataBuf;
+    bool isFirst;
 };
 
 #endif // MATHWORKER_H

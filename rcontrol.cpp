@@ -4,6 +4,8 @@
 
 Rcontrol::Rcontrol(QObject *parent) : QObject(parent)
 {
+    noSync = false;
+
 //    QString path(QCoreApplication::applicationFilePath()+".conf");
     settings = new QSettings();
     connect(this,&Rcontrol::changeInt,this,&Rcontrol::sChangeInt);
@@ -85,6 +87,7 @@ Rcontrol::Rcontrol(QObject *parent) : QObject(parent)
     //connect(worker, &Work::ShowYY, this, &Rcontrol::ShowYY);
     connect(worker, &Work::ShowXX, plotterXX, &Plotter::ShowDataVector);
     connect(worker, &Work::ShowYY, plotterYY, &Plotter::ShowDataVector);
+    connect(worker, &Work::setSizeBlock,this,&Rcontrol::ssetSizeBlock);
 
 
     connect(this,&Rcontrol::changeBool,worker,&Work::sChangeBool);
@@ -113,12 +116,10 @@ Rcontrol::Rcontrol(QObject *parent) : QObject(parent)
     corThread2.start();
 
 }
-void Rcontrol::ShowXX(IntVector &amp, IntVector &ph){
-
+void Rcontrol::ssetSizeBlock(unsigned int val){
+    emit setSizeBlock(val);
 }
-void Rcontrol::ShowYY(IntVector &amp, IntVector &ph){
 
-}
 Rcontrol::~Rcontrol()
 {
     workerThread.quit();
@@ -134,6 +135,7 @@ void Rcontrol::sMaxColorValue(int val){
     emit MaxColorValue(val);
 }
 void Rcontrol::init(){
+    noSync = true;
 
     int xRotation = settings->value("xRotation",0).toInt();
     emit setxValue(xRotation);
@@ -166,7 +168,7 @@ void Rcontrol::init(){
     int ArgMax = settings->value("ArgMax",1024).toInt();
     emit setArgMax(ArgMax);
     setInt("ArgMax",ArgMax);
-    int PhMin = settings->value("PhMin",-180).toInt();
+    int PhMin = settings->value("PhMin",10).toInt();
     emit setPhMin(PhMin);
     setInt("PhMin",PhMin);
 
@@ -196,6 +198,7 @@ void Rcontrol::init(){
     emit setcbLOGM(settings->value("cbLOGM",false).toBool());
     emit setrbDdsRstBurst(settings->value("rbDdsRstBurst",false).toBool());
     emit setrbDdsRstPulse(settings->value("rbDdsRstPulse",true).toBool());
+    noSync = false;
 
 
 }
@@ -345,19 +348,23 @@ void Rcontrol::verticalSliderChanged(int val){
     emit setMax(val);
 }
 void Rcontrol::sChangeInt(QString name, int val){
-    settings->sync();
+    if(!noSync)
+        settings->sync();
     cInt[name] = val;
 }
 void Rcontrol::sChangeDouble(QString name, double val){
-    settings->sync();
+    if(!noSync)
+        settings->sync();
     cDouble[name] = val;
 }
 void Rcontrol::sChangeBool(QString name, bool val){
-    settings->sync();
+    if(!noSync)
+        settings->sync();
     cBool[name] = val;
 }
 void Rcontrol::sChangeString(QString name, QString val){
-    settings->sync();
+    if(!noSync)
+        settings->sync();
     cString[name] = val;
 }
 int Rcontrol::getInt(QString name){
@@ -401,19 +408,23 @@ QString Rcontrol::getString(QString name){
     }
 }
 void Rcontrol::setInt(QString name,int value){
-    settings->setValue(name,value);
+    if(!noSync)
+        settings->setValue(name,value);
     emit changeInt(name,value);
 }
 void Rcontrol::setBool(QString name,bool value){
-    settings->setValue(name,value);
+    if(!noSync)
+        settings->setValue(name,value);
     emit changeBool(name,value);
 }
 void Rcontrol::setDouble(QString name,double value){
-    settings->setValue(name,value);
+    if(!noSync)
+        settings->setValue(name,value);
     emit changeDouble(name,value);
 }
 void Rcontrol::setString(QString name,QString value){
-    settings->setValue(name,value);
+    if(!noSync)
+        settings->setValue(name,value);
     emit changeString(name,value);
 }
 void Rcontrol::ArgMinChanged(int val){

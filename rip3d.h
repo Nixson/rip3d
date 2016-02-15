@@ -44,6 +44,7 @@ private slots:
     void yRotationChanged(int);
     void zRotationChanged(int);
     void MaxColorValue(int);
+    void setSizeBlock(int);
 
     void progress(int);
     void progressTimer();

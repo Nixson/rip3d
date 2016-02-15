@@ -10,7 +10,98 @@ ScObject::ScObject(QObject *parent)
 {
     clearData();
     loadDataImage();
+    Size = 0;
+    AngleMin = 0;
+    AngleMax = 0;
+    OffsetMin = 0;
+    OffsetMax = 0;
+    delY = 1.0f;
 
+}
+void ScObject::setAngle(int min,int max){
+    AngleMin = min+180;
+    AngleMax = max+180;
+    delY = (GLfloat)32.0f/(181-max);
+    reLine();
+}
+void ScObject::setOffset(unsigned int min, unsigned int max){
+    OffsetMin = min;
+    OffsetMax = max;
+    reLine();
+}
+void ScObject::setSizeBlock(unsigned int size){
+    Size = size;
+    reLine();
+}
+void ScObject::reLine(){
+    if(Size == 0) return;
+    l_count = 12*2*6;
+    l_data.resize(24*6);
+    sObjectLink = l_data.data();
+    centerX = (GLfloat)Size/2;
+    centerY =  AngleMin + (GLfloat) ( AngleMax - AngleMin ) /2;
+    centerZ = OffsetMin + (GLfloat) ( OffsetMax - OffsetMin ) /2;
+    //top
+    appendPoint(-1,AngleMin-1,OffsetMin-1);
+    appendPoint(-1,AngleMin-1,OffsetMax+1);
+    appendPoint(-1,AngleMin-1,OffsetMin-1);
+    appendPoint(-1,AngleMax+1,OffsetMin-1);
+    appendPoint(-1,AngleMax+1,OffsetMax+1);
+    appendPoint(-1,AngleMax+1,OffsetMin-1);
+    appendPoint(-1,AngleMax+1,OffsetMax+1);
+    appendPoint(-1,AngleMin-1,OffsetMax+1);
+
+    appendPoint(Size+1,AngleMin-1,OffsetMin-1);
+    appendPoint(Size+1,AngleMin-1,OffsetMax+1);
+    appendPoint(Size+1,AngleMin-1,OffsetMin-1);
+    appendPoint(Size+1,AngleMax+1,OffsetMin-1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,AngleMax+1,OffsetMin-1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,AngleMin-1,OffsetMax+1);
+
+    appendPoint(-1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax+1);
+
+    appendPoint(-1,AngleMin-1,OffsetMax+1);
+    appendPoint(Size+1,AngleMin-1,OffsetMax+1);
+
+    appendPoint(-1,AngleMax+1,OffsetMin-1);
+    appendPoint(Size+1,AngleMax+1,OffsetMin-1);
+
+    appendPoint(-1,AngleMin-1,OffsetMin-1);
+    appendPoint(Size+1,AngleMin-1,OffsetMin-1);
+    /*appendPoint(Size+1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax-1);*/
+
+    /*appendPoint(-1,AngleMin-1,OffsetMax+1);
+    appendPoint(-1,AngleMax+1,OffsetMax+1);
+    appendPoint(-1,AngleMax+1,OffsetMin-1);
+    //bottom
+    appendPoint(Size+1,-1,-1);
+    appendPoint(Size+1,-1,OffsetMax+1);
+    appendPoint(Size+1,-1,-1);
+    appendPoint(Size+1,AngleMax+1,-1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,-1,OffsetMax+1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,AngleMax+1,-1);
+    appendPoint(-1,-1,-1);
+    appendPoint(Size+1,-1,-1);
+    appendPoint(-1,AngleMax+1,-1);
+    appendPoint(Size+1,AngleMax+1,-1);
+    appendPoint(-1,-1,OffsetMax+1);
+    appendPoint(Size+1,-1,OffsetMax+1);
+    appendPoint(-1,AngleMax+1,OffsetMax+1);
+    appendPoint(Size+1,AngleMax+1,OffsetMax+1);*/
+}
+void ScObject::appendPoint(int x,int y,int z){
+    *(sObjectLink++) = (centerX-x)/MAXBYTEFLOAT;
+    *(sObjectLink++) = (centerY-y)/(MAXBYTEFLOAT*delY);
+    *(sObjectLink++) = -(centerZ-z)/MAXBYTEFLOAT;
+    *(sObjectLink++) = 0.0f;
+    *(sObjectLink++) = 1.0f;
+    *(sObjectLink++) = 0.0f;
 }
 void ScObject::setMax(int color){
     maxColor = color;

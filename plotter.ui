@@ -19,7 +19,7 @@
      <property name="maximumSize">
       <size>
        <width>16777215</width>
-       <height>50</height>
+       <height>80</height>
       </size>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
@@ -55,6 +55,13 @@
         </item>
        </layout>
       </item>
+      <item row="1" column="0">
+       <widget class="QSlider" name="horizontalSlider">
+        <property name="orientation">
+         <enum>Qt::Horizontal</enum>
+        </property>
+       </widget>
+      </item>
      </layout>
     </widget>
    </item>
@@ -76,5 +83,38 @@
   </customwidget>
  </customwidgets>
  <resources/>
- <connections/>
+ <connections>
+  <connection>
+   <sender>horizontalSlider</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>spinBox</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>239</x>
+     <y>72</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>183</x>
+     <y>37</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>spinBox</sender>
+   <signal>valueChanged(int)</signal>
+   <receiver>horizontalSlider</receiver>
+   <slot>setValue(int)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>183</x>
+     <y>37</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>239</x>
+     <y>72</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
 </ui>

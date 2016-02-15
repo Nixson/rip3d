@@ -29,6 +29,8 @@ private slots:
 
     void on_spinBox_2_valueChanged(int arg1);
 
+    void on_horizontalSlider_valueChanged(int value);
+
 private:
     Ui::Plotter *ui;
     IntVector Amp;

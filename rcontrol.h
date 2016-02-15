@@ -10,6 +10,7 @@
 #include <iostream>
 #include "plotter.h"
 
+
 class Rcontrol : public QObject
 {
     Q_OBJECT
@@ -44,6 +45,7 @@ signals:
     void logLine1(QString);
     void logLine2(QString);
     void resultReady(const Clowd &result);
+    void setSizeBlock(unsigned int);
 
     void setxValue(int);
     void setyValue(int);
@@ -82,9 +84,6 @@ signals:
 
 public slots:
 
-    void ShowXX(IntVector &amp,IntVector &ph);
-    void ShowYY(IntVector &amp,IntVector &ph);
-
     void doOperate(const QByteArray &param);
     void doDensity(bool);
     void sprogress(int);
@@ -93,6 +92,7 @@ public slots:
     void slogLine2(QString);
     void sresultReady(const Clowd &result);
     void sMaxColorValue(int val);
+    void ssetSizeBlock(unsigned int val);
 
     void xValueChanged(int);
     void yValueChanged(int);
@@ -138,6 +138,7 @@ private:
     formSettings *formsettings;
     Plotter *plotterXX;
     Plotter *plotterYY;
+    bool noSync;
 };
 
 #endif // RCONTROL_H

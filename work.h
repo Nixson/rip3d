@@ -46,6 +46,7 @@ signals:
     void MaxColorValue(int);
     void ShowXX(IntVector &amp,IntVector &ph);
     void ShowYY(IntVector &amp,IntVector &ph);
+    void setSizeBlock(unsigned int);
 private:
     unsigned int bSize,bSizeProgress, progressTimerVal;
     bool density,end1,end2, end3;

@@ -1,4 +1,5 @@
 #include "mathworker.h"
+#include <iostream>
 
 MathWorker::MathWorker()
 {
@@ -91,6 +92,7 @@ void MathWorker::clear(){
     ResUlst.clear();
 }
 void MathWorker::run(){
+    isFirst = true;
     ResUlst.resize((NumLast-NumStart)*BLOCKLANGTH*2);
     MathVector ResUlstY;
     ResUlstY.resize((NumLast-NumStart)*BLOCKLANGTH*2);
@@ -298,6 +300,7 @@ void MathWorker::Math1(unsigned int BufSize, double *DataBuf)
      a0YY = DataBuf+Size*2;
      a1YY = DataBuf+Size*3;
 
+
      MyCorrelation(a0XX, Size, OriginalPulseRe, Size, a0XXsv0);
      MyCorrelation(a0XX, Size, OriginalPulseIm, Size, a0XXsv1);
      MyCorrelation(a1XX, Size, OriginalPulseRe, Size, a1XXsv0);
@@ -346,5 +349,5 @@ void MathWorker::Math1(unsigned int BufSize, double *DataBuf)
             else ResYYAng[i] = 0;
 
      }
-//   formExpDraw->DrawOscCoherentAccum(ResXXAbs, Size);
+     //   formExpDraw->DrawOscCoherentAccum(ResXXAbs, Size);
 }
