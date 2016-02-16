@@ -100,7 +100,7 @@ void Rip3d::zRotationChanged(int val){
 void Rip3d::progressTimer(){
     timer = new QTimer(this);
     connect(timer,SIGNAL(timeout()),this,SLOT(progressTimerNum()));
-    timer->start(60);
+    timer->start(70);
     timerOn = true;
 }
 void Rip3d::progressTimerNum(){

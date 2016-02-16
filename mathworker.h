@@ -48,7 +48,7 @@ private:
     double *ResXXReAvg, *ResXXImAvg;
     double *ResYYReAvg, *ResYYImAvg;
     MathVector mBuffer;
-    MathVector ResUlst;
+    MathVector ResUlst, ResUlstY;
     double *a0XX, *a1XX, *a0YY, *a1YY;
     double *DataBuf;
     bool isFirst;

@@ -46,11 +46,29 @@ void Work::Proc(){
         }
     }
     mWorker->Buffer(dataDouble,0,bSize);
+    emit progressTimer();
     connect(mWorker,&MathWorker::result,this,&Work::result);
     connect(mWorker,&MathWorker::resultXX,this,&Work::resultXX);
     connect(mWorker,&MathWorker::resultYY,this,&Work::resultYY);
 
     mWorker->run();
+
+    /*
+    int bSizeF = bSize/3;
+    bSizeProgress = 1;
+    end1 = false;
+    end2 = false;
+    end3 = false;
+    emit progressTimer();
+    emit Buffer1(dataDouble,bSizeF+1,bSizeF*2+1);
+    emit Buffer2(dataDouble,bSizeF*2+1,bSize+1);
+    emit run1();
+    emit run2();
+    mWorker->Buffer(dataDouble,0,bSizeF+1);
+    connect(mWorker,&MathWorker::result,this,&Work::result3);
+    mWorker->run();
+*/
+
 }
 void Work::resultXX(const MathVector &buf){
     IntVector resultA;
@@ -112,6 +130,7 @@ void Work::result(const MathVector &buf){
     emit MaxColorValue(MaxColor);
     Size = (unsigned int)bSize;
     emit setSizeBlock(Size);
+    emit progress(100);
     plot();
 }
 void Work::setAngle(int min, int max){

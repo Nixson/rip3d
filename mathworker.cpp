@@ -90,13 +90,14 @@ void MathWorker::clear(){
     delete[] a1YYsv1;
     mBuffer.clear();
     ResUlst.clear();
+    ResUlstY.clear();
 }
 void MathWorker::run(){
     isFirst = true;
     ResUlst.resize((NumLast-NumStart)*BLOCKLANGTH*2);
-    MathVector ResUlstY;
     ResUlstY.resize((NumLast-NumStart)*BLOCKLANGTH*2);
     int step = 0;
+    //Math();
     for(int iNum = NumStart; iNum < NumLast; iNum++){
         double *DataBuf;
         DataBuf = mBuffer.data()+iNum*BLOCKRANGE;
@@ -108,14 +109,14 @@ void MathWorker::run(){
                ResUlstY[step] = ResYYAbs[i];
                step++;
                // !!! значения аргумента в диапазоне от -180 до 180
-               index = round(ResXXAng[i]+180); // округдение аргумента для определения индекса ячейки
+               index = round(ResXXAng[i]+180); // округление аргумента для определения индекса ячейки
                // приведение фазы к диапазону от 0 до 360
                while(index >= 360) index -= 360;
                while(index < 0) index += 360;
                // накопление значений
                ResUlst[step] = index;
                // !!! значения аргумента в диапазоне от -180 до 180
-               index = round(ResYYAng[i]+180); // округдение аргумента для определения индекса ячейки
+               index = round(ResYYAng[i]+180); // округление аргумента для определения индекса ячейки
                // приведение фазы к диапазону от 0 до 360
                while(index >= 360) index -= 360;
                while(index < 0) index += 360;
@@ -132,26 +133,7 @@ void MathWorker::run(){
     clear();
 }
 
-/*
-void MathWorker::MyCorrelation(double* in, int dataSize, double* kernel, int kernelSize, double* out)
-{
-        int i, j, k;
 
-        // Проверка параметров
-        if(!in || !out || !kernel) return;
-        if(dataSize <=0 || kernelSize <= 0) return;
-
-        // convolution from out[0] to out[kernelSize-2]
-        for(i = 0; i < BLOCKLANGTH; ++i)
-        {
-                out[i] = 0;                             // init to 0 before sum
-                for(j = i, k = 0; j >= 0; --j, ++k){
-                        out[i] += in[j] * kernel[k];
-                }
-        }
-        return;
-}
-*/
 void MathWorker::Math()
 {
     int j, k;
@@ -165,16 +147,16 @@ void MathWorker::Math()
 
     int position = 0;
     double *XXRsp = new double[BLOCKLANGTH*2];
+    double *YYRsp = new double[BLOCKLANGTH*2];
+    bool fst = true;
     for(int iNum = NumStart; iNum < NumLast; iNum++){
         DataBuf = mBuffer.data()+iNum*BLOCKRANGE;
 
 
         a0XX = DataBuf+BLOCKLANGTH*0;
-        a0YY = DataBuf+BLOCKLANGTH*1;
-        a1XX = DataBuf+BLOCKLANGTH*2;
+        a1XX = DataBuf+BLOCKLANGTH*1;
+        a0YY = DataBuf+BLOCKLANGTH*2;
         a1YY = DataBuf+BLOCKLANGTH*3;
-
-        unsigned int sTp = 0;
 
         for(unsigned int i = 0; i < BLOCKLANGTH; ++i)
         {
@@ -188,7 +170,7 @@ void MathWorker::Math()
             a1YYsv1 = 0;
             for(j = i, k = 0; j >= 0; --j, ++k){
                 double re = OriginalPulseRe[k];
-                double im = OriginalPulseRe[k];
+                double im = OriginalPulseIm[k];
                 a0XXsv0 += a0XX[j] * re;
                 a0XXsv1 += a0XX[j] * im;
                 a1XXsv0 += a1XX[j] * re;
@@ -233,18 +215,29 @@ void MathWorker::Math()
             ResYYAbs = pow(ResYYRe*ResYYRe + ResYYIm*ResYYIm, 0.5);
             if(ResYYAbs >= 1e-13) ResYYAng = RAD*(atan2(ResYYIm, ResYYRe));
             else ResYYAng = 0;
-            double index = round(ResXXAng+180);
-            if(index >= 360)
-                index -=360;
-            if(index < 0)
-                index +=360;
-            XXRsp[sTp] = ResXXAbs;
-            sTp++;
-            XXRsp[sTp] = ResXXAbs;
-            sTp++;
+            // !!! значения аргумента в диапазоне от -180 до 180
+            double index = round(ResXXAng+180); // округление аргумента для определения индекса ячейки
+            // приведение фазы к диапазону от 0 до 360
+            while(index >= 360) index -= 360;
+            while(index < 0) index += 360;
+            // накопление значений
+
+            *(XXRsp++) = ResXXAbs;
+            *(XXRsp++) = index;
+            // !!! значения аргумента в диапазоне от -180 до 180
+            index = round(ResYYAng+180); // округление аргумента для определения индекса ячейки
+            // приведение фазы к диапазону от 0 до 360
+            while(index >= 360) index -= 360;
+            while(index < 0) index += 360;
+            // накопление значений
+
+            *(YYRsp++) = ResYYAbs;
+            *(YYRsp++) = index;
         }
+        fst = false;
 
          memcpy(ResUlst.data()+position,XXRsp,BLOCKLANGTH*sizeof(double)*2);
+         memcpy(ResUlstY.data()+position,YYRsp,BLOCKLANGTH*sizeof(double)*2);
          //memcpy(ResUlst.data()+position,ResXXPhase,BLOCKLANGTH*sizeof(double));
          /*memcpy(
           * .data()+position*3,ResYYAbs,BLOCKLANGTH*sizeof(double));
@@ -252,6 +245,7 @@ void MathWorker::Math()
          position+=BLOCKLANGTH*2;
      }
     delete[] XXRsp;
+    delete[] YYRsp;
 }
 
 
@@ -286,13 +280,7 @@ void MathWorker::MyCorrelation(double* in, int dataSize, double* kernel, int ker
 void MathWorker::Math1(unsigned int BufSize, double *DataBuf)
 {
      double *a0XX, *a1XX, *a0YY, *a1YY;
-/*
-     unsigned int Size = BufSize/sizeof(int);
-     a0XX = DataBuf+1024*0;
-     a1XX = DataBuf+1024*1;
-     a0YY = DataBuf+1024*2;
-     a1YY = DataBuf+1024*3;
-*/
+
      unsigned int Size = BufSize/4;
 
      a0XX = DataBuf+Size*0;
@@ -347,7 +335,13 @@ void MathWorker::Math1(unsigned int BufSize, double *DataBuf)
             ResYYAbs[i] = pow(ResYYRe[i]*ResYYRe[i] + ResYYIm[i]*ResYYIm[i], 0.5);
             if(ResYYAbs[i] >= 1e-13) ResYYAng[i] = RAD*(atan2(ResYYIm[i], ResYYRe[i]));
             else ResYYAng[i] = 0;
+            /*
+            if(isFirst){
+                std::cout << ResXXAbs[i] << " : " << ResYYAbs[i] << " : " << ResXXPhase[i] << " : " << ResXXPhase[i] << std::endl;
+            }
+            */
 
      }
+     isFirst = false;
      //   formExpDraw->DrawOscCoherentAccum(ResXXAbs, Size);
 }
